@@ -7,4 +7,5 @@ module.exports = {
     tsconfigRootDir: __dirname,
   },
   env: { node: true, es2022: true },
+  ignorePatterns: ["node_modules/", "dist/", "vitest.config.ts"],
 };
