@@ -4,7 +4,10 @@ import dotenv from 'dotenv';
 import express, { type Application, type Request, type Response } from 'express';
 import helmet from 'helmet';
 
+import { storageDevRouter } from './lib/storage';
 import authRouter from './routes/auth';
+import filesRouter from './routes/files';
+import foldersRouter from './routes/folders';
 
 dotenv.config();
 
@@ -24,11 +27,16 @@ app.use(cookieParser());
 
 // Health-check
 app.get('/', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', app: 'orbit-api', phase: 1 });
+  res.json({ status: 'ok', app: 'orbit-api', phase: 2 });
 });
 
-// Auth routes
+// Direct storage endpoints for dev local disk adapter
+app.use('/storage-dev', storageDevRouter);
+
+// Core API routes
 app.use('/api/auth', authRouter);
+app.use('/api/folders', foldersRouter);
+app.use('/api/files', filesRouter);
 
 app.listen(PORT, () => {
   console.log(`[orbit-api] listening on http://localhost:${PORT}`);

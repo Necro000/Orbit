@@ -404,3 +404,425 @@ body {
   border-color: var(--color-accent);
   box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
 }
+
+/* ─── Phase 2: File Grid & Cards ─────────────────────────────────────────── */
+.file-grid-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+}
+
+.grid-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-muted);
+}
+
+.grid-cards-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+  user-select: none;
+  position: relative;
+}
+
+.card:hover {
+  background: var(--color-surface-2);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.card--selected {
+  background: rgba(108, 99, 255, 0.12) !important;
+  border-color: var(--color-accent) !important;
+}
+
+.folder-card {
+  min-height: 60px;
+}
+
+.file-card {
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 14px;
+}
+
+.file-card-preview {
+  width: 100%;
+  height: 100px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.file-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.card-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.card-size {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ─── Phase 2: File Table (List View) ────────────────────────────────────── */
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.file-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  text-align: left;
+}
+
+.file-table th {
+  padding: 12px 16px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table-row {
+  cursor: pointer;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.15s;
+}
+
+.table-row:hover {
+  background: var(--color-surface);
+}
+
+.table-row--selected {
+  background: rgba(108, 99, 255, 0.12) !important;
+}
+
+.file-table td {
+  padding: 12px 16px;
+}
+
+.item-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 500;
+}
+
+.td-size, .td-date {
+  color: var(--color-text-muted);
+}
+
+.action-icon-btn {
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-icon-btn:hover {
+  background: var(--color-surface-2);
+  color: var(--color-text);
+}
+
+/* ─── Phase 2: Upload Dropzone & Progress ────────────────────────────────── */
+.upload-dropzone-container {
+  position: relative;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.upload-dropzone-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 15, 19, 0.85);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--color-accent);
+  border-radius: var(--radius-lg);
+  margin: 8px;
+}
+
+.upload-dropzone-banner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.upload-dropzone-text {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.upload-progress-panel {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 340px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.upload-progress-header {
+  padding: 12px 16px;
+  background: var(--color-surface-2);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.upload-progress-list {
+  max-height: 240px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.upload-progress-item {
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border-bottom: 1px solid var(--color-border);
+  position: relative;
+}
+
+.upload-progress-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.upload-progress-filename {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.upload-progress-status {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+.upload-progress-bar-bg {
+  height: 4px;
+  background: var(--color-surface-2);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.upload-progress-bar-fill {
+  height: 100%;
+  border-radius: var(--radius-full);
+  transition: width 0.2s ease;
+}
+
+.upload-progress-bar-fill--uploading { background: var(--color-accent); }
+.upload-progress-bar-fill--processing { background: var(--color-warning); }
+.upload-progress-bar-fill--done { background: var(--color-success); }
+.upload-progress-bar-fill--failed { background: var(--color-danger); }
+
+.upload-progress-dismiss-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.upload-progress-dismiss-btn:hover { color: var(--color-text); }
+
+/* ─── Phase 2: Context Menu ──────────────────────────────────────────────── */
+.context-menu {
+  position: fixed;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  min-width: 180px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.context-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text);
+  background: none;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: background 0.15s, color 0.15s;
+}
+
+.context-menu-item:hover {
+  background: var(--color-surface-2);
+}
+
+.context-menu-item--disabled {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+}
+
+.context-menu-item--danger {
+  color: var(--color-danger);
+}
+
+.context-menu-item--danger:hover {
+  background: rgba(255, 92, 92, 0.15);
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: var(--color-border);
+  margin: 4px 0;
+}
+
+/* ─── Phase 2: Modals ────────────────────────────────────────────────────── */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  padding: 16px;
+}
+
+.modal-container {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 440px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.modal-description {
+  font-size: 14px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.input {
+  background: var(--color-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  padding: 10px 14px;
+  font-size: 14px;
+  width: 100%;
+  outline: none;
+}
+
+.input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(108, 99, 255, 0.2);
+}
+
+.error-message {
+  font-size: 13px;
+  color: var(--color-danger);
+}
+

@@ -5,6 +5,7 @@ import { Toolbar, type ToolbarProps } from './Toolbar';
 export interface AppShellProps {
   children: React.ReactNode;
   breadcrumbPath?: BreadcrumbSegment[];
+  onNavigateBreadcrumb?: (folderId: string) => void;
   toolbarProps?: Partial<ToolbarProps>;
 }
 
@@ -13,7 +14,12 @@ export interface AppShellProps {
  * Composes <Sidebar>, <Toolbar>, <Breadcrumb>, and the main content slot.
  * Per ui-components.md §1.
  */
-export function AppShell({ children, breadcrumbPath, toolbarProps }: AppShellProps) {
+export function AppShell({
+  children,
+  breadcrumbPath,
+  onNavigateBreadcrumb,
+  toolbarProps,
+}: AppShellProps) {
   return (
     <div className="app-shell">
       <Sidebar />
@@ -22,7 +28,7 @@ export function AppShell({ children, breadcrumbPath, toolbarProps }: AppShellPro
         <Toolbar {...toolbarProps} />
 
         <div className="app-content">
-          <Breadcrumb path={breadcrumbPath} />
+          <Breadcrumb path={breadcrumbPath} onNavigate={onNavigateBreadcrumb} />
           <main className="app-content-area" id="main-content">
             {children}
           </main>

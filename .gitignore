@@ -30,5 +30,6 @@ Thumbs.db
 # Test coverage
 coverage/
 
-# Local database data
+# Local database data & storage
 infra/pgdata/
+infra/storage/
