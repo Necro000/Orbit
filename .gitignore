@@ -1,4 +1,4 @@
-# Documentation (local only — not pushed to GitHub)
+# Documentation (local only â€” not pushed to GitHub)
 Docs/
 
 # Dependencies
@@ -13,8 +13,19 @@ node_modules/
 .next/
 dist/
 build/
+out/
+
+# pnpm
+.pnpm-store/
 
 # OS / editor
 .DS_Store
 Thumbs.db
 .vscode/
+*.swp
+
+# Turbo (if added later)
+.turbo/
+
+# Test coverage
+coverage/
