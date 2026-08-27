@@ -3,7 +3,7 @@
  *
  * Decision: Use `pg` (node-postgres) Pool directly, no ORM.
  * Rationale:
- *  - Zero abstraction overhead; every query is explicit SQL → easy to audit
+ *  - Zero abstraction overhead; every query is explicit SQL -> easy to audit
  *    for injection risks (parameterized queries only, no string concat).
  *  - Matches brain.md §5: "No raw storage keys returned to client" — same
  *    discipline: what you see is what gets sent to Postgres.
@@ -14,7 +14,14 @@
  * Connection: DATABASE_URL env var (see .env.example).
  */
 
+import path from 'path';
+
+import dotenv from 'dotenv';
 import { Pool } from 'pg';
+
+// Load .env from root or local directory
+dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../../../.env') });
 
 if (!process.env['DATABASE_URL']) {
   throw new Error('DATABASE_URL environment variable is required');
