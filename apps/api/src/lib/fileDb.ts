@@ -16,10 +16,17 @@ export interface FileRecord {
   updated_at: Date;
 }
 
-export async function findFileById(id: string, ownerId: string): Promise<FileRecord | null> {
+export async function findFileById(id: string, ownerId?: string): Promise<FileRecord | null> {
+  if (ownerId) {
+    const result = await db.query<FileRecord>(
+      'SELECT * FROM files WHERE id = $1 AND owner_id = $2 AND is_deleted = false',
+      [id, ownerId],
+    );
+    return result.rows[0] ?? null;
+  }
   const result = await db.query<FileRecord>(
-    'SELECT * FROM files WHERE id = $1 AND owner_id = $2 AND is_deleted = false',
-    [id, ownerId],
+    'SELECT * FROM files WHERE id = $1 AND is_deleted = false',
+    [id],
   );
   return result.rows[0] ?? null;
 }

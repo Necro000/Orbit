@@ -240,8 +240,11 @@ router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response): void
       return;
     }
 
-    const result = await db.query<UserRow>(
-      'SELECT id, email, name, image_url, created_at FROM users WHERE id = $1',
+    const result = await db.query<UserRow & { storage_used_bytes?: string | number }>(
+      `SELECT u.id, u.email, u.name, u.image_url, u.created_at,
+              COALESCE((SELECT SUM(size_bytes) FROM files WHERE owner_id = u.id AND status != 'trashed'), 0) AS storage_used_bytes
+       FROM users u
+       WHERE u.id = $1`,
       [userId],
     );
     const user = result.rows[0];
@@ -249,6 +252,9 @@ router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response): void
       res.status(404).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found.' } });
       return;
     }
+
+    const storageUsedBytes = Number(user.storage_used_bytes ?? 0);
+
     res.status(200).json({
       user: {
         id: user.id,
@@ -256,6 +262,7 @@ router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response): void
         name: user.name,
         imageUrl: user.image_url,
         createdAt: user.created_at,
+        storageUsedBytes,
       },
     });
   })();

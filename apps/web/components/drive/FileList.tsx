@@ -3,7 +3,7 @@
 import React from 'react';
 import type { DriveItem, FolderItem, FileItem } from '@/lib/folders';
 import { formatBytes, formatDate } from '@/lib/format';
-import { Icon, getFileIconName } from '../ui/Icons';
+import { ThumbnailPreview } from './ThumbnailPreview';
 
 interface FileListProps {
   items: DriveItem[];
@@ -21,9 +21,15 @@ export function FileList({ items, selectedIds, onSelect, onOpen, onContextMenu }
   if (items.length === 0) {
     return (
       <div className="empty-state">
-        <Icon name="folder-open" className="w-16 h-16 text-muted mb-4" />
-        <h3 className="empty-state-title">This folder is empty</h3>
-        <p className="empty-state-subtitle">Drag and drop files here, or use the Upload button above.</p>
+        <div className="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-400 mb-2">
+          <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+        </div>
+        <h3 className="text-base font-semibold text-slate-200">This folder is empty</h3>
+        <p className="text-xs text-slate-400 max-w-sm text-center">
+          Drag and drop files here, or use the Upload button in the toolbar above.
+        </p>
       </div>
     );
   }
@@ -42,9 +48,6 @@ export function FileList({ items, selectedIds, onSelect, onOpen, onContextMenu }
         <tbody>
           {sortedItems.map((item) => {
             const isSelected = selectedIds.includes(item.id);
-            const iconName = item.isFolder
-              ? 'folder'
-              : getFileIconName(item.mime_type, item.name);
 
             return (
               <tr
@@ -60,10 +63,15 @@ export function FileList({ items, selectedIds, onSelect, onOpen, onContextMenu }
               >
                 <td className="td-name">
                   <div className="item-name-cell">
-                    <Icon
-                      name={iconName}
-                      className={`w-5 h-5 flex-shrink-0 ${item.isFolder ? 'text-warning' : 'text-primary'}`}
-                    />
+                    {item.isFolder ? (
+                      <div className="w-6 h-6 rounded bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 flex-shrink-0">
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <ThumbnailPreview file={item} className="w-6 h-6 flex-shrink-0 rounded" />
+                    )}
                     <span className="truncate" title={item.name}>
                       {item.name}
                     </span>
@@ -85,7 +93,9 @@ export function FileList({ items, selectedIds, onSelect, onOpen, onContextMenu }
                     }}
                     aria-label={`Actions for ${item.name}`}
                   >
-                    <Icon name="more" className="w-4 h-4" />
+                    <svg className="w-4 h-4 text-slate-400 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                    </svg>
                   </button>
                 </td>
               </tr>

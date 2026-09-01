@@ -33,6 +33,7 @@ export const initUploadSchema = z.object({
     .min(1, 'File size must be at least 1 byte')
     .max(MAX_FILE_SIZE_BYTES, `File exceeds maximum allowed size of 500MB`),
   folderId: z.string().uuid('Invalid folder UUID').nullable().optional(),
+  fileId: z.string().uuid('Invalid file UUID').optional(), // If supplied, upload is a new version of this existing file
   checksum: z.string().trim().optional(),
 });
 
@@ -60,6 +61,16 @@ export const fileIdParamSchema = z.object({
   id: z.string().uuid('Invalid file UUID'),
 });
 
+export const versionIdParamSchema = z.object({
+  id: z.string().uuid('Invalid file UUID'),
+  versionId: z.string().uuid('Invalid version UUID'),
+});
+
+export const revertVersionSchema = z.object({
+  expectedCurrentVersionId: z.string().uuid('Invalid current version UUID').optional(),
+});
+
 export type InitUploadInput = z.infer<typeof initUploadSchema>;
 export type CompleteUploadInput = z.infer<typeof completeUploadSchema>;
 export type UpdateFileInput = z.infer<typeof updateFileSchema>;
+export type RevertVersionInput = z.infer<typeof revertVersionSchema>;

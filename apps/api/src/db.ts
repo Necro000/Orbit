@@ -34,6 +34,13 @@ export const db = new Pool({
   connectionTimeoutMillis: 5_000,
 });
 
+db.on('connect', (client) => {
+  client.query("SET client_encoding TO 'UTF8'").catch((err: unknown) => {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.warn('[db] Failed to set client_encoding to UTF8:', msg);
+  });
+});
+
 // Fail fast on startup if the DB is unreachable.
 db.on('error', (err) => {
   console.error('[db] Unexpected pool error:', err.message);

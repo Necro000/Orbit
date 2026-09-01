@@ -3,6 +3,8 @@ import { Router } from 'express';
 import type { ZodError } from 'zod';
 
 import { db } from '../db';
+import { resolveAccess } from '../lib/acl';
+import { logActivity } from '../lib/activity';
 import {
   findFolderById,
   getFolderPath,
@@ -31,12 +33,16 @@ router.post('/', (req: AuthenticatedRequest, res: Response): void => {
       return;
     }
     const { name, parentId } = parseRes.data;
-    const ownerId = req.user!.id;
+    const userId = req.user!.id;
 
     if (parentId) {
-      const parent = await findFolderById(parentId, ownerId);
-      if (!parent) {
+      const parentAccess = await resolveAccess(userId, 'folder', parentId);
+      if (!parentAccess.canRead) {
         res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Parent folder not found.' } });
+        return;
+      }
+      if (!parentAccess.canWrite) {
+        res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You do not have permission to create folders here.' } });
         return;
       }
     }
@@ -44,9 +50,11 @@ router.post('/', (req: AuthenticatedRequest, res: Response): void => {
     try {
       const result = await db.query<FolderRow>(
         'INSERT INTO folders (name, owner_id, parent_id) VALUES ($1, $2, $3) RETURNING id, name, owner_id, parent_id, created_at, updated_at',
-        [name, ownerId, parentId ?? null],
+        [name, userId, parentId ?? null],
       );
-      res.status(201).json({ folder: result.rows[0] });
+      const folder = result.rows[0]!;
+      await logActivity(userId, 'upload', 'folder', folder.id, { name, parentId });
+      res.status(201).json({ folder });
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'code' in err && err.code === '23505') {
         res.status(409).json({ error: { code: 'DUPLICATE_FOLDER_NAME', message: 'A folder with this name already exists in this location.' } });
@@ -66,23 +74,33 @@ router.get('/:id', (req: AuthenticatedRequest, res: Response): void => {
       return;
     }
     const folderId = paramRes.data.id;
-    const ownerId = req.user!.id;
+    const userId = req.user!.id;
 
     if (folderId === 'root') {
-      const children = await getFolderChildren(null, ownerId);
-      res.json({ folder: { id: 'root', name: 'My Drive', parentId: null }, path: [], ...children });
+      const children = await getFolderChildren(null, userId);
+      res.json({
+        folder: { id: 'root', name: 'My Drive', parentId: null, role: 'owner' },
+        path: [],
+        ...children,
+      });
       return;
     }
 
-    const folder = await findFolderById(folderId, ownerId);
+    const access = await resolveAccess(userId, 'folder', folderId);
+    if (!access.canRead) {
+      res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Folder not found or access denied.' } });
+      return;
+    }
+
+    const folder = await findFolderById(folderId);
     if (!folder) {
       res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Folder not found.' } });
       return;
     }
 
-    const path = await getFolderPath(folderId, ownerId);
-    const children = await getFolderChildren(folderId, ownerId);
-    res.json({ folder, path, ...children });
+    const path = await getFolderPath(folderId);
+    const children = await getFolderChildren(folderId);
+    res.json({ folder: { ...folder, role: access.role }, path, ...children });
   })();
 });
 
@@ -97,14 +115,24 @@ router.patch('/:id', (req: AuthenticatedRequest, res: Response): void => {
       return;
     }
     const folderId = paramRes.data.id;
-    const ownerId = req.user!.id;
+    const userId = req.user!.id;
 
     if (folderId === 'root') {
       res.status(400).json({ error: { code: 'CANNOT_MODIFY_ROOT', message: 'Root folder cannot be renamed or moved.' } });
       return;
     }
 
-    const existing = await findFolderById(folderId, ownerId);
+    const access = await resolveAccess(userId, 'folder', folderId);
+    if (!access.canRead) {
+      res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Folder not found.' } });
+      return;
+    }
+    if (!access.isOwner) {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Only the folder owner can rename or move it.' } });
+      return;
+    }
+
+    const existing = await findFolderById(folderId);
     if (!existing) {
       res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Folder not found.' } });
       return;
@@ -118,12 +146,12 @@ router.patch('/:id', (req: AuthenticatedRequest, res: Response): void => {
         res.status(400).json({ error: { code: 'CYCLIC_MOVE_NOT_ALLOWED', message: 'A folder cannot be moved into itself.' } });
         return;
       }
-      const targetParent = await findFolderById(parentId, ownerId);
-      if (!targetParent) {
+      const targetAccess = await resolveAccess(userId, 'folder', parentId);
+      if (!targetAccess.canRead) {
         res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Destination folder not found.' } });
         return;
       }
-      const isCyclic = await isDescendantFolder(folderId, parentId, ownerId);
+      const isCyclic = await isDescendantFolder(folderId, parentId);
       if (isCyclic) {
         res.status(400).json({ error: { code: 'CYCLIC_MOVE_NOT_ALLOWED', message: 'A folder cannot be moved into one of its subfolders.' } });
         return;
@@ -132,9 +160,11 @@ router.patch('/:id', (req: AuthenticatedRequest, res: Response): void => {
 
     try {
       const updated = await db.query<FolderRow>(
-        'UPDATE folders SET name = $1, parent_id = $2, updated_at = NOW() WHERE id = $3 AND owner_id = $4 RETURNING id, name, owner_id, parent_id, created_at, updated_at',
-        [name ?? existing.name, newParentId, folderId, ownerId],
+        'UPDATE folders SET name = $1, parent_id = $2, updated_at = NOW() WHERE id = $3 RETURNING id, name, owner_id, parent_id, created_at, updated_at',
+        [name ?? existing.name, newParentId, folderId],
       );
+      const action = name && name !== existing.name ? 'rename' : 'move';
+      await logActivity(userId, action, 'folder', folderId, { oldName: existing.name, newName: name, newParentId });
       res.json({ folder: updated.rows[0] });
     } catch (err: unknown) {
       if (typeof err === 'object' && err !== null && 'code' in err && err.code === '23505') {
@@ -155,20 +185,31 @@ router.delete('/:id', (req: AuthenticatedRequest, res: Response): void => {
       return;
     }
     const folderId = paramRes.data.id;
-    const ownerId = req.user!.id;
+    const userId = req.user!.id;
 
     if (folderId === 'root') {
       res.status(400).json({ error: { code: 'CANNOT_DELETE_ROOT', message: 'Root folder cannot be deleted.' } });
       return;
     }
 
-    const existing = await findFolderById(folderId, ownerId);
+    const access = await resolveAccess(userId, 'folder', folderId);
+    if (!access.canRead) {
+      res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Folder not found.' } });
+      return;
+    }
+    if (!access.isOwner) {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Only the folder owner can delete it.' } });
+      return;
+    }
+
+    const existing = await findFolderById(folderId);
     if (!existing) {
       res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Folder not found.' } });
       return;
     }
 
-    await softDeleteFolderTree(folderId, ownerId);
+    await softDeleteFolderTree(folderId, existing.owner_id);
+    await logActivity(userId, 'delete', 'folder', folderId, { name: existing.name });
     res.json({ ok: true, deletedFolderId: folderId });
   })();
 });

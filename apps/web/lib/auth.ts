@@ -9,6 +9,7 @@ export interface CurrentUser {
   name: string;
   imageUrl: string | null;
   createdAt: string;
+  storageUsedBytes?: number;
 }
 
 export function useCurrentUser() {

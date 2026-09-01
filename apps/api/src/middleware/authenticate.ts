@@ -25,7 +25,9 @@ export function authenticate(
   next: NextFunction,
 ): void {
   const cookies = req.cookies as Record<string, string | undefined> | undefined;
-  const token = cookies?.[ACCESS_COOKIE];
+  const authHeader = req.headers.authorization;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : undefined;
+  const token = cookies?.[ACCESS_COOKIE] || bearerToken || (req.query?.['token'] as string | undefined);
 
   if (!token) {
     res.status(401).json({

@@ -178,4 +178,45 @@ describe('Files API (/api/files)', () => {
       .set('Cookie', [`orbit_access=${tokenUserA}`]);
     expect(getRes.status).toBe(404);
   });
+
+  it('completes upload with 200 and stays up when preview worker throws an error', async () => {
+    // 1. Init upload for a corrupted/mock file
+    const initRes = await supertest(app)
+      .post('/api/files/init')
+      .set('Cookie', [`orbit_access=${tokenUserA}`])
+      .send({
+        name: 'corrupted-image.png',
+        mimeType: 'image/png',
+        sizeBytes: 30,
+      });
+
+    expect(initRes.status).toBe(201);
+    const body = initRes.body as FileTestResponse;
+    const fileId = body.file.id;
+
+    // Upload corrupted non-image bytes to storage
+    const url = new URL(body.upload!.uploadUrl);
+    const uploadRes = await supertest(app)
+      .put(`${url.pathname}${url.search}`)
+      .set('Content-Type', 'image/png')
+      .send('not-a-real-png-corrupted-data');
+    expect(uploadRes.status).toBe(200);
+
+    // 2. Call /complete — worker will attempt thumbnail generation and encounter invalid image format, but /complete must still return 200
+    const completeRes = await supertest(app)
+      .post('/api/files/complete')
+      .set('Cookie', [`orbit_access=${tokenUserA}`])
+      .send({ fileId });
+
+    expect(completeRes.status).toBe(200);
+    const completeBody = completeRes.body as FileTestResponse;
+    expect(completeBody.file.status).toBe('ready');
+
+    // 3. Confirm API process is alive and responsive
+    const healthRes = await supertest(app)
+      .get(`/api/files/${fileId}`)
+      .set('Cookie', [`orbit_access=${tokenUserA}`]);
+    expect(healthRes.status).toBe(200);
+  });
 });
+

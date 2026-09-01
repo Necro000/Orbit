@@ -29,15 +29,30 @@ export interface StorageProvider {
     storageKey: string,
     filename: string,
     expiresInSec?: number,
+    inline?: boolean,
   ): Promise<string>;
 
   deleteObject(storageKey: string): Promise<void>;
 
   verifyObject(storageKey: string): Promise<VerifyObjectResult>;
+
+  getObject(storageKey: string): Promise<Buffer>;
+
+  saveObjectDirect(
+    storageKey: string,
+    data: Buffer,
+    mimeType: string,
+  ): Promise<void>;
 }
 
-const STORAGE_SECRET =
-  process.env['JWT_SECRET'] ?? 'orbit-storage-dev-secret-32-chars-long';
+import dotenv from 'dotenv';
+dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
+
+function getStorageSecret(): string {
+  return process.env['JWT_SECRET'] ?? 'orbit-storage-dev-secret-32-chars-long';
+}
+
 const STORAGE_DIR = path.resolve(process.cwd(), '../../infra/storage');
 
 /**
@@ -49,13 +64,15 @@ export function buildStorageKey(
   folderId: string | null | undefined,
   fileId: string,
   rawFilename: string,
+  versionNumber?: number,
 ): string {
   const safeFilename = sanitizeFilename(rawFilename);
   const ext = path.extname(safeFilename);
   const base = path.basename(safeFilename, ext).slice(0, 50);
   const slug = base.replace(/[^a-zA-Z0-9_-]/g, '_') || 'file';
   const folderSegment = folderId ? folderId : 'root';
-  return `tenants/${ownerId}/folders/${folderSegment}/files/${fileId}-${slug}${ext}`;
+  const versionSegment = versionNumber && versionNumber > 1 ? `-v${versionNumber}` : '';
+  return `tenants/${ownerId}/folders/${folderSegment}/files/${fileId}${versionSegment}-${slug}${ext}`;
 }
 
 export function sanitizeFilename(filename: string): string {
@@ -72,7 +89,7 @@ function signUrlParams(params: Record<string, string>): string {
     .sort()
     .map((k) => `${k}=${params[k] ?? ''}`)
     .join('&');
-  return crypto.createHmac('sha256', STORAGE_SECRET).update(sorted).digest('hex');
+  return crypto.createHmac('sha256', getStorageSecret()).update(sorted).digest('hex');
 }
 
 function verifyUrlSignature(params: Record<string, string>, signature: string): boolean {
@@ -127,6 +144,7 @@ export class LocalStorageProvider implements StorageProvider {
     storageKey: string,
     filename: string,
     expiresInSec = 900,
+    inline = false,
   ): Promise<string> {
     const expires = String(Math.floor(Date.now() / 1000) + expiresInSec);
     const params: Record<string, string> = {
@@ -134,6 +152,9 @@ export class LocalStorageProvider implements StorageProvider {
       file: filename,
       key: storageKey,
     };
+    if (inline) {
+      params['inline'] = '1';
+    }
     const signature = signUrlParams(params);
     const qs = new URLSearchParams({ ...params, sig: signature }).toString();
     return Promise.resolve(`${this.apiBase}/storage-dev/download?${qs}`);
@@ -156,6 +177,28 @@ export class LocalStorageProvider implements StorageProvider {
     const fileBuffer = fs.readFileSync(filePath);
     const checksum = crypto.createHash('sha256').update(fileBuffer).digest('hex');
     return Promise.resolve({ exists: true, sizeBytes: stat.size, checksum });
+  }
+
+  public getObject(storageKey: string): Promise<Buffer> {
+    const filePath = this.resolvePath(storageKey);
+    if (!fs.existsSync(filePath)) {
+      return Promise.reject(new Error(`Storage object not found: ${storageKey}`));
+    }
+    return Promise.resolve(fs.readFileSync(filePath));
+  }
+
+  public saveObjectDirect(
+    storageKey: string,
+    data: Buffer,
+    _mimeType: string,
+  ): Promise<void> {
+    const filePath = this.resolvePath(storageKey);
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filePath, data);
+    return Promise.resolve();
   }
 }
 
@@ -204,7 +247,7 @@ storageDevRouter.put('/upload', (req: Request, res: Response): void => {
 });
 
 storageDevRouter.get('/download', (req: Request, res: Response): void => {
-  const { key, file, expires, sig } = req.query as Record<string, string | undefined>;
+  const { key, file, expires, sig, inline } = req.query as Record<string, string | undefined>;
 
   if (!key || !file || !expires || !sig) {
     res.status(400).json({ error: { code: 'INVALID_STORAGE_URL', message: 'Missing parameters.' } });
@@ -216,7 +259,10 @@ storageDevRouter.get('/download', (req: Request, res: Response): void => {
     return;
   }
 
-  const paramsToVerify = { expires, file, key };
+  const paramsToVerify: Record<string, string> = { expires, file, key };
+  if (inline) {
+    paramsToVerify['inline'] = inline;
+  }
   if (!verifyUrlSignature(paramsToVerify, sig)) {
     res.status(403).json({ error: { code: 'INVALID_SIGNATURE', message: 'Invalid URL signature.' } });
     return;
@@ -225,6 +271,15 @@ storageDevRouter.get('/download', (req: Request, res: Response): void => {
   const filePath = path.join(STORAGE_DIR, key.replace(/\.\./g, ''));
   if (!fs.existsSync(filePath)) {
     res.status(404).json({ error: { code: 'FILE_NOT_FOUND', message: 'File not found in storage.' } });
+    return;
+  }
+
+  if (inline === '1' || inline === 'true') {
+    res.sendFile(filePath, {
+      headers: {
+        'Content-Disposition': `inline; filename="${encodeURIComponent(file)}"`,
+      },
+    });
     return;
   }
 

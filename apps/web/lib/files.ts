@@ -61,8 +61,18 @@ export function useDeleteFile(currentFolderId: string | 'root' = 'root') {
   });
 }
 
+export interface FileDetailsResponse {
+  file: FileItem & { role?: string };
+  downloadUrl: string;
+  streamUrl?: string;
+}
+
+export async function getFileDetails(fileId: string): Promise<FileDetailsResponse> {
+  return apiFetch<FileDetailsResponse>(`/api/files/${fileId}`);
+}
+
 export async function downloadFile(fileId: string) {
-  const res = await apiFetch<{ file: FileItem; downloadUrl: string }>(`/api/files/${fileId}`);
+  const res = await apiFetch<FileDetailsResponse>(`/api/files/${fileId}`);
   const a = document.createElement('a');
   a.href = res.downloadUrl;
   a.download = res.file.name;

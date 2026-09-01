@@ -17,64 +17,84 @@ export interface FileRow {
   size_bytes: string;
   checksum: string | null;
   status: string;
+  owner_id?: string;
   created_at: Date;
   updated_at: Date;
 }
 
-export async function findFolderById(id: string, ownerId: string): Promise<FolderRow | null> {
+export async function findFolderById(id: string, ownerId?: string): Promise<FolderRow | null> {
+  if (ownerId) {
+    const result = await db.query<FolderRow>(
+      'SELECT id, name, owner_id, parent_id, is_deleted, created_at, updated_at FROM folders WHERE id = $1 AND owner_id = $2 AND is_deleted = false',
+      [id, ownerId],
+    );
+    return result.rows[0] ?? null;
+  }
   const result = await db.query<FolderRow>(
-    'SELECT id, name, owner_id, parent_id, is_deleted, created_at, updated_at FROM folders WHERE id = $1 AND owner_id = $2 AND is_deleted = false',
-    [id, ownerId],
+    'SELECT id, name, owner_id, parent_id, is_deleted, created_at, updated_at FROM folders WHERE id = $1 AND is_deleted = false',
+    [id],
   );
   return result.rows[0] ?? null;
 }
 
-export async function getFolderPath(folderId: string, ownerId: string): Promise<{ id: string; name: string }[]> {
+export async function getFolderPath(folderId: string): Promise<{ id: string; name: string }[]> {
   const query = `
     WITH RECURSIVE path_tree AS (
-      SELECT id, name, parent_id, 0 as depth FROM folders WHERE id = $1 AND owner_id = $2 AND is_deleted = false
+      SELECT id, name, parent_id, 0 as depth FROM folders WHERE id = $1 AND is_deleted = false
       UNION ALL
       SELECT f.id, f.name, f.parent_id, pt.depth + 1 FROM folders f
       INNER JOIN path_tree pt ON f.id = pt.parent_id
-      WHERE f.owner_id = $2 AND f.is_deleted = false
+      WHERE f.is_deleted = false
     )
     SELECT id, name FROM path_tree ORDER BY depth DESC;
   `;
-  const result = await db.query<{ id: string; name: string }>(query, [folderId, ownerId]);
+  const result = await db.query<{ id: string; name: string }>(query, [folderId]);
   return result.rows;
 }
 
 export async function getFolderChildren(
   parentId: string | null,
-  ownerId: string,
+  ownerId?: string,
 ): Promise<{ folders: FolderRow[]; files: FileRow[] }> {
-  const foldersQuery = parentId === null
-    ? 'SELECT id, name, owner_id, parent_id, created_at, updated_at FROM folders WHERE owner_id = $1 AND parent_id IS NULL AND is_deleted = false ORDER BY name ASC'
-    : 'SELECT id, name, owner_id, parent_id, created_at, updated_at FROM folders WHERE owner_id = $1 AND parent_id = $2 AND is_deleted = false ORDER BY name ASC';
-  const folderParams = parentId === null ? [ownerId] : [ownerId, parentId];
+  let foldersQuery: string;
+  let folderParams: (string | null)[];
+
+  if (parentId === null) {
+    foldersQuery = 'SELECT id, name, owner_id, parent_id, created_at, updated_at FROM folders WHERE owner_id = $1 AND parent_id IS NULL AND is_deleted = false ORDER BY name ASC';
+    folderParams = [ownerId!];
+  } else {
+    foldersQuery = 'SELECT id, name, owner_id, parent_id, created_at, updated_at FROM folders WHERE parent_id = $1 AND is_deleted = false ORDER BY name ASC';
+    folderParams = [parentId];
+  }
   const foldersRes = await db.query<FolderRow>(foldersQuery, folderParams);
 
-  const filesQuery = parentId === null
-    ? "SELECT id, name, mime_type, size_bytes, checksum, status, created_at, updated_at FROM files WHERE owner_id = $1 AND folder_id IS NULL AND is_deleted = false AND status = 'ready' ORDER BY name ASC"
-    : "SELECT id, name, mime_type, size_bytes, checksum, status, created_at, updated_at FROM files WHERE owner_id = $1 AND folder_id = $2 AND is_deleted = false AND status = 'ready' ORDER BY name ASC";
-  const fileParams = parentId === null ? [ownerId] : [ownerId, parentId];
+  let filesQuery: string;
+  let fileParams: (string | null)[];
+
+  if (parentId === null) {
+    filesQuery = "SELECT id, name, mime_type, size_bytes, checksum, status, owner_id, created_at, updated_at FROM files WHERE owner_id = $1 AND folder_id IS NULL AND is_deleted = false AND status = 'ready' ORDER BY name ASC";
+    fileParams = [ownerId!];
+  } else {
+    filesQuery = "SELECT id, name, mime_type, size_bytes, checksum, status, owner_id, created_at, updated_at FROM files WHERE folder_id = $1 AND is_deleted = false AND status = 'ready' ORDER BY name ASC";
+    fileParams = [parentId];
+  }
   const filesRes = await db.query<FileRow>(filesQuery, fileParams);
 
   return { folders: foldersRes.rows, files: filesRes.rows };
 }
 
-export async function isDescendantFolder(folderId: string, targetId: string, ownerId: string): Promise<boolean> {
+export async function isDescendantFolder(folderId: string, targetId: string): Promise<boolean> {
   const query = `
     WITH RECURSIVE descendants AS (
-      SELECT id FROM folders WHERE parent_id = $1 AND owner_id = $2 AND is_deleted = false
+      SELECT id FROM folders WHERE parent_id = $1 AND is_deleted = false
       UNION ALL
       SELECT f.id FROM folders f
       INNER JOIN descendants d ON f.parent_id = d.id
-      WHERE f.owner_id = $2 AND f.is_deleted = false
+      WHERE f.is_deleted = false
     )
-    SELECT 1 FROM descendants WHERE id = $3 LIMIT 1;
+    SELECT 1 FROM descendants WHERE id = $2 LIMIT 1;
   `;
-  const result = await db.query(query, [folderId, ownerId, targetId]);
+  const result = await db.query(query, [folderId, targetId]);
   return result.rowCount !== null && result.rowCount > 0;
 }
 

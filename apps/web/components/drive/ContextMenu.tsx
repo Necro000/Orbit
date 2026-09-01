@@ -12,6 +12,10 @@ export interface ContextMenuProps {
   onDownload: (item: DriveItem) => void;
   onRename: (item: DriveItem) => void;
   onDelete: (item: DriveItem) => void;
+  onShare?: (item: DriveItem) => void;
+  onPublicLink?: (item: DriveItem) => void;
+  onToggleStar?: (item: DriveItem) => void;
+  onDetails?: (item: DriveItem) => void;
 }
 
 export function ContextMenu({
@@ -22,6 +26,10 @@ export function ContextMenu({
   onDownload,
   onRename,
   onDelete,
+  onShare,
+  onPublicLink,
+  onToggleStar,
+  onDetails,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -47,13 +55,16 @@ export function ContextMenu({
 
   if (!position || !item) return null;
 
+  const isViewer = item.role === 'viewer';
+  const isStarred = Boolean(item.is_starred);
+
   return (
     <div
       ref={menuRef}
       className="context-menu"
       style={{
-        top: `${Math.min(position.y, window.innerHeight - 250)}px`,
-        left: `${Math.min(position.x, window.innerWidth - 200)}px`,
+        top: `${Math.min(position.y, window.innerHeight - 320)}px`,
+        left: `${Math.min(position.x, window.innerWidth - 220)}px`,
       }}
       role="menu"
       aria-label="Item actions"
@@ -86,57 +97,100 @@ export function ContextMenu({
         </button>
       )}
 
-      <button
-        type="button"
-        className="context-menu-item"
-        role="menuitem"
-        onClick={() => {
-          onRename(item);
-          onClose();
-        }}
-      >
-        <Icon name="edit" className="w-4 h-4" />
-        <span>Rename</span>
-      </button>
+      {onToggleStar && (
+        <button
+          type="button"
+          className="context-menu-item"
+          role="menuitem"
+          onClick={() => {
+            onToggleStar(item);
+            onClose();
+          }}
+        >
+          <Icon name="star" className={`w-4 h-4 ${isStarred ? 'text-amber-400 fill-amber-400' : ''}`} />
+          <span>{isStarred ? 'Remove from Starred' : 'Add to Starred'}</span>
+        </button>
+      )}
+
+      {!isViewer && (
+        <button
+          type="button"
+          className="context-menu-item"
+          role="menuitem"
+          onClick={() => {
+            onRename(item);
+            onClose();
+          }}
+        >
+          <Icon name="edit" className="w-4 h-4" />
+          <span>Rename</span>
+        </button>
+      )}
 
       <div className="context-menu-divider" role="separator" />
 
-      <button
-        type="button"
-        className="context-menu-item context-menu-item--disabled"
-        role="menuitem"
-        disabled
-        title="Sharing enabled in Phase 3"
-      >
-        <Icon name="share" className="w-4 h-4 text-muted" />
-        <span className="text-muted">Share (Phase 3)</span>
-      </button>
+      {onShare && (
+        <button
+          type="button"
+          className="context-menu-item"
+          role="menuitem"
+          onClick={() => {
+            onShare(item);
+            onClose();
+          }}
+        >
+          <Icon name="share" className="w-4 h-4" />
+          <span>Share...</span>
+        </button>
+      )}
 
-      <button
-        type="button"
-        className="context-menu-item context-menu-item--disabled"
-        role="menuitem"
-        disabled
-        title="Starring enabled in Phase 3"
-      >
-        <Icon name="star" className="w-4 h-4 text-muted" />
-        <span className="text-muted">Star (Phase 3)</span>
-      </button>
+      {onPublicLink && (
+        <button
+          type="button"
+          className="context-menu-item"
+          role="menuitem"
+          onClick={() => {
+            onPublicLink(item);
+            onClose();
+          }}
+        >
+          <Icon name="link" className="w-4 h-4" />
+          <span>Get Public Link</span>
+        </button>
+      )}
 
-      <div className="context-menu-divider" role="separator" />
+      {onDetails && (
+        <button
+          type="button"
+          className="context-menu-item"
+          role="menuitem"
+          onClick={() => {
+            onDetails(item);
+            onClose();
+          }}
+        >
+          <Icon name="info" className="w-4 h-4" />
+          <span>Details & Activity</span>
+        </button>
+      )}
 
-      <button
-        type="button"
-        className="context-menu-item context-menu-item--danger"
-        role="menuitem"
-        onClick={() => {
-          onDelete(item);
-          onClose();
-        }}
-      >
-        <Icon name="trash" className="w-4 h-4" />
-        <span>Delete</span>
-      </button>
+      {!isViewer && (
+        <>
+          <div className="context-menu-divider" role="separator" />
+          <button
+            type="button"
+            className="context-menu-item context-menu-item--danger"
+            role="menuitem"
+            onClick={() => {
+              onDelete(item);
+              onClose();
+            }}
+          >
+            <Icon name="trash" className="w-4 h-4" />
+            <span>Move to Trash</span>
+          </button>
+        </>
+      )}
     </div>
   );
 }
