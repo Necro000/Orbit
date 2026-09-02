@@ -5,7 +5,9 @@
  * All fetch calls in the app should go through this helper (or a hook that uses it).
  */
 
-const API_BASE = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:8080';
+const API_BASE = typeof window === 'undefined'
+  ? (process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:8080')
+  : '';
 
 let isRefreshing = false;
 let pendingRequests: Array<() => void> = [];
