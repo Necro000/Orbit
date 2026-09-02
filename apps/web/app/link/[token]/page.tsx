@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icons';
-import { useToast } from '@/components/ui/Toast';
 
 interface PublicFile {
   id: string;
@@ -54,9 +53,7 @@ function formatBytes(bytes: number | string): string {
 
 export default function PublicLinkPage() {
   const params = useParams();
-  const router = useRouter();
   const token = typeof params?.token === 'string' ? params.token : '';
-  const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -71,78 +68,109 @@ export default function PublicLinkPage() {
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080';
 
-  const fetchLink = async (pwd?: string) => {
-    if (!token) return;
-    setIsLoading(true);
-    setError(null);
-    setPasswordError(null);
-
-    try {
-      const url = new URL(`${apiUrl}/api/link/${token}`);
-      if (pwd) {
-        url.searchParams.set('password', pwd);
-      }
-
-      const res = await fetch(url.toString(), {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(pwd ? { 'x-link-password': pwd } : {}),
-        },
-      });
-
-      if (res.status === 410) {
-        setIsExpired(true);
-        setIsLoading(false);
-        return;
-      }
-
-      if (res.status === 401) {
-        setRequiresPassword(true);
-        setPasswordError('Incorrect password. Please try again.');
-        setIsLoading(false);
-        return;
-      }
-
-      if (res.status === 429) {
-        const body = await res.json().catch(() => ({}));
-        setError(body?.error?.message || 'Too many attempts. Please try again later.');
-        setIsLoading(false);
-        return;
-      }
-
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        setError(body?.error?.message || 'Failed to load link or resource not found.');
-        setIsLoading(false);
-        return;
-      }
-
-      const json = await res.json();
-      if (json.requiresPassword) {
-        setRequiresPassword(true);
-      } else {
-        setRequiresPassword(false);
-        setData(json);
-      }
-    } catch {
-      setError('Network error connecting to Orbit server.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    if (token) {
-      void fetchLink();
+    if (!token) return;
+    let isMounted = true;
+
+    async function loadLink() {
+      try {
+        const url = new URL(`${apiUrl}/api/link/${token}`);
+        const res = await fetch(url.toString(), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!isMounted) return;
+
+        if (res.status === 410) {
+          setIsExpired(true);
+          setIsLoading(false);
+          return;
+        }
+
+        if (res.status === 401) {
+          setRequiresPassword(true);
+          setPasswordError('Password required to view this link.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (res.status === 429) {
+          const body = await res.json().catch(() => ({}));
+          setError(body?.error?.message || 'Too many attempts. Please try again later.');
+          setIsLoading(false);
+          return;
+        }
+
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          setError(body?.error?.message || 'Failed to load link or resource not found.');
+          setIsLoading(false);
+          return;
+        }
+
+        const json = await res.json();
+        if (json.requiresPassword) {
+          setRequiresPassword(true);
+        } else {
+          setRequiresPassword(false);
+          setData(json);
+        }
+      } catch {
+        if (isMounted) {
+          setError('Network error connecting to Orbit server.');
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     }
-  }, [token]);
+
+    void loadLink();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [token, apiUrl]);
 
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password.trim()) return;
     setIsSubmittingPassword(true);
-    await fetchLink(password);
-    setIsSubmittingPassword(false);
+    setPasswordError(null);
+
+    try {
+      const url = new URL(`${apiUrl}/api/link/${token}`);
+      url.searchParams.set('password', password);
+      const res = await fetch(url.toString(), {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-link-password': password,
+        },
+      });
+
+      if (res.status === 401) {
+        setPasswordError('Incorrect password. Please try again.');
+        return;
+      }
+      if (res.status === 410) {
+        setIsExpired(true);
+        return;
+      }
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body?.error?.message || 'Failed to load link.');
+        return;
+      }
+
+      const json = await res.json();
+      setRequiresPassword(false);
+      setData(json);
+    } catch {
+      setPasswordError('Network error. Please try again.');
+    } finally {
+      setIsSubmittingPassword(false);
+    }
   };
 
   return (

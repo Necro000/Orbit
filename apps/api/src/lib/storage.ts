@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 
 import type { Request, Response, IRouter } from 'express';
 import { Router } from 'express';
@@ -209,7 +209,7 @@ export class LocalStorageProvider implements StorageProvider {
  * Requires SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, and SUPABASE_STORAGE_BUCKET env vars.
  */
 export class SupabaseStorageProvider implements StorageProvider {
-  private client: SupabaseClient;
+  private client: ReturnType<typeof createClient>;
   private bucket: string;
 
   constructor() {
