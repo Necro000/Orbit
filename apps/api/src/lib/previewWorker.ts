@@ -59,9 +59,13 @@ let maintenanceWorker: Worker<MaintenanceJobData> | null = null;
 
 try {
   const connectionUrl = new URL(REDIS_URL);
+  const isTls = connectionUrl.protocol === 'rediss:';
   const connection = {
     host: connectionUrl.hostname || '127.0.0.1',
     port: Number(connectionUrl.port || 6379),
+    username: connectionUrl.username ? decodeURIComponent(connectionUrl.username) : undefined,
+    password: connectionUrl.password ? decodeURIComponent(connectionUrl.password) : undefined,
+    tls: isTls ? { rejectUnauthorized: false } : undefined,
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     retryStrategy: (times: number) => {
