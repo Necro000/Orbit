@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  // Standalone output is only needed for custom Docker containers, not on Vercel
+  ...(process.env.VERCEL ? {} : { output: 'standalone' }),
   devIndicators: false,
 };
 
