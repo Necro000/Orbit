@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { Icon } from '@/components/ui/Icons';
 
@@ -177,7 +178,7 @@ export default function PublicLinkPage() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-between p-4 sm:p-8">
       {/* Header Bar */}
       <header className="w-full max-w-4xl flex items-center justify-between py-4 border-b border-slate-800">
-        <div className="flex items-center gap-3 cursor-pointer" onClick={() => router.push('/')}>
+        <Link href="/" className="flex items-center gap-3 cursor-pointer">
           <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-black text-white text-lg shadow-lg shadow-indigo-600/30">
             O
           </div>
@@ -187,7 +188,7 @@ export default function PublicLinkPage() {
               Shared Link
             </span>
           </div>
-        </div>
+        </Link>
       </header>
 
       {/* Main Content Area */}
