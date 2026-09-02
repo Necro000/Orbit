@@ -24,15 +24,42 @@ export interface LinkShareEntry {
   createdAt: string;
 }
 
-export async function fetchShares(resourceType: 'file' | 'folder', resourceId: string): Promise<ShareEntry[]> {
-  const res = await apiFetch<{ shares: ShareEntry[] }>(`/api/shares/${resourceType}/${resourceId}`);
-  return res.shares;
+export interface ResourceOwner {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface UserAccessInfo {
+  isOwner: boolean;
+  canManageAcl: boolean;
+  role: 'owner' | 'editor' | 'viewer';
+}
+
+export interface SharesData {
+  shares: ShareEntry[];
+  owner: ResourceOwner | null;
+  userAccess?: UserAccessInfo;
+}
+
+export async function fetchShares(resourceType: 'file' | 'folder', resourceId: string): Promise<SharesData> {
+  const res = await apiFetch<{
+    shares: ShareEntry[];
+    owner?: ResourceOwner | null;
+    userAccess?: UserAccessInfo;
+  }>(`/api/shares/${resourceType}/${resourceId}`);
+  return {
+    shares: res.shares || [],
+    owner: res.owner || null,
+    userAccess: res.userAccess,
+  };
 }
 
 export async function createShare(params: {
   resourceType: 'file' | 'folder';
   resourceId: string;
   granteeEmail?: string;
+  granteeUserId?: string;
   role: 'viewer' | 'editor';
 }): Promise<ShareEntry> {
   const res = await apiFetch<{ share: ShareEntry }>('/api/shares', {
@@ -83,4 +110,20 @@ export function useLinkShare(resourceType: 'file' | 'folder', resourceId: string
     queryFn: () => fetchLinkShare(resourceType, resourceId),
     enabled: Boolean(resourceId),
   });
+}
+
+/**
+ * Gets an existing public link or generates a new one, then copies it to clipboard.
+ */
+export async function getOrGenerateShareLink(resourceType: 'file' | 'folder', resourceId: string): Promise<string> {
+  let link = await fetchLinkShare(resourceType, resourceId);
+  if (!link) {
+    link = await createLinkShare({ resourceType, resourceId });
+  }
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const url = `${origin}/link/${link.token}`;
+  if (typeof navigator !== 'undefined' && navigator.clipboard) {
+    await navigator.clipboard.writeText(url);
+  }
+  return url;
 }

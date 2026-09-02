@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: orbit-api
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: "pnpm install --frozen-lockfile && pnpm --filter @orbit/api build"
+    startCommand: "pnpm --filter @orbit/api db:migrate:prod && pnpm --filter @orbit/api start"
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "8080"
+      - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: REFRESH_SECRET
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: orbit-files

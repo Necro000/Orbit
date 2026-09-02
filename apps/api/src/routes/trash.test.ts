@@ -30,6 +30,7 @@ describe('Trash & Restore API (/api/trash)', () => {
   let expiredFileId: string;
   let orphanedFileId: string;
   let parentFolderId: string;
+  let deleteItemFileId: string;
 
   beforeAll(async () => {
     const { db } = await import('../db');
@@ -70,6 +71,14 @@ describe('Trash & Restore API (/api/trash)', () => {
       [`key_orph_${Date.now()}`, trashUserId, parentFolderId],
     );
     orphanedFileId = oRes.rows[0]!.id;
+
+    // 4. File for delete test
+    const dRes = await db.query<{ id: string }>(
+      `INSERT INTO files (name, mime_type, size_bytes, storage_key, owner_id, is_deleted, status, updated_at)
+       VALUES ('item_to_delete.txt', 'text/plain', 50, $1, $2, true, 'ready', NOW()) RETURNING id`,
+      [`key_todel_${Date.now()}`, trashUserId],
+    );
+    deleteItemFileId = dRes.rows[0]!.id;
   });
 
   it('lists soft-deleted files in /api/trash', async () => {
@@ -106,6 +115,23 @@ describe('Trash & Restore API (/api/trash)', () => {
     expect(body.file.folder_id).toBeNull(); // Placed at root
   });
 
+  it('permanently deletes an item from trash via /api/trash/delete', async () => {
+    const res = await supertest(app)
+      .post('/api/trash/delete')
+      .set('Cookie', [`orbit_access=${trashToken}`])
+      .send({ resourceType: 'file', resourceId: deleteItemFileId });
+
+    expect(res.status).toBe(200);
+    const body = res.body as { ok: boolean; resourceType: string };
+    expect(body.ok).toBe(true);
+    expect(body.resourceType).toBe('file');
+
+    // Verify it is gone from DB
+    const { db } = await import('../db');
+    const check = await db.query('SELECT * FROM files WHERE id = $1', [deleteItemFileId]);
+    expect(check.rows.length).toBe(0);
+  });
+
   it('purge job removes items older than 30 days', async () => {
     const purgeResult = await purgeExpiredTrash(30);
     expect(purgeResult.purgedFiles).toBeGreaterThanOrEqual(1);
@@ -116,5 +142,23 @@ describe('Trash & Restore API (/api/trash)', () => {
       .send({ resourceType: 'file', resourceId: expiredFileId });
 
     expect(restoreRes.status).toBe(404);
+  });
+
+  it('empties all trash items via /api/trash/empty', async () => {
+    const res = await supertest(app)
+      .post('/api/trash/empty')
+      .set('Cookie', [`orbit_access=${trashToken}`]);
+
+    expect(res.status).toBe(200);
+    const body = res.body as { ok: boolean; purgedFiles: number; purgedFolders: number };
+    expect(body.ok).toBe(true);
+
+    const listRes = await supertest(app)
+      .get('/api/trash')
+      .set('Cookie', [`orbit_access=${trashToken}`]);
+
+    const listBody = listRes.body as { files: unknown[]; folders: unknown[] };
+    expect(listBody.files.length).toBe(0);
+    expect(listBody.folders.length).toBe(0);
   });
 });

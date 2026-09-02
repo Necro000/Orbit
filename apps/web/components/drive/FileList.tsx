@@ -20,14 +20,14 @@ export function FileList({ items, selectedIds, onSelect, onOpen, onContextMenu }
 
   if (items.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700 flex items-center justify-center text-slate-400 mb-2">
+      <div className="empty-state flex flex-col items-center justify-center min-h-[300px] text-center p-8">
+        <div className="w-16 h-16 rounded-[10px] bg-bg-surface border border-border-subtle flex items-center justify-center text-text-secondary mb-3">
           <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
         </div>
-        <h3 className="text-base font-semibold text-slate-200">This folder is empty</h3>
-        <p className="text-xs text-slate-400 max-w-sm text-center">
+        <h3 className="text-base font-semibold text-text-primary">This folder is empty</h3>
+        <p className="text-xs text-text-secondary max-w-sm text-center mt-1">
           Drag and drop files here, or use the Upload button in the toolbar above.
         </p>
       </div>
@@ -35,24 +35,28 @@ export function FileList({ items, selectedIds, onSelect, onOpen, onContextMenu }
   }
 
   return (
-    <div className="table-wrapper" role="region" aria-label="Folder contents table">
-      <table className="file-table">
+    <div className="w-full overflow-x-auto" role="region" aria-label="Folder contents table">
+      <table className="w-full border-collapse text-sm text-left">
         <thead>
-          <tr>
-            <th scope="col" className="th-name">Name</th>
-            <th scope="col" className="th-size">Size</th>
-            <th scope="col" className="th-date">Date Modified</th>
-            <th scope="col" className="th-actions"><span className="sr-only">Actions</span></th>
+          <tr className="border-b border-border-subtle">
+            <th scope="col" className="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-[0.05em]">Name</th>
+            <th scope="col" className="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-[0.05em]">Size</th>
+            <th scope="col" className="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-[0.05em]">Date Modified</th>
+            <th scope="col" className="py-3 px-4 text-xs font-semibold text-text-secondary uppercase tracking-[0.05em]"><span className="sr-only">Actions</span></th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="divide-y divide-border-subtle">
           {sortedItems.map((item) => {
             const isSelected = selectedIds.includes(item.id);
 
             return (
               <tr
                 key={item.id}
-                className={`table-row${isSelected ? ' table-row--selected' : ''}`}
+                className={`transition-colors cursor-pointer select-none ${
+                  isSelected
+                    ? 'bg-accent/10'
+                    : 'hover:bg-bg-surface-hover'
+                }`}
                 onClick={(e) => onSelect(item.id, e.ctrlKey || e.metaKey)}
                 onDoubleClick={() => onOpen(item)}
                 onContextMenu={(e) => {
@@ -61,39 +65,39 @@ export function FileList({ items, selectedIds, onSelect, onOpen, onContextMenu }
                 }}
                 aria-selected={isSelected}
               >
-                <td className="td-name">
-                  <div className="item-name-cell">
+                <td className="py-3 px-4">
+                  <div className="flex items-center gap-3">
                     {item.isFolder ? (
-                      <div className="w-6 h-6 rounded bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 flex-shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-[#F5C84C1A] border border-[#F5C84C33] flex items-center justify-center text-[#F5C84C] flex-shrink-0">
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                         </svg>
                       </div>
                     ) : (
-                      <ThumbnailPreview file={item} className="w-6 h-6 flex-shrink-0 rounded" />
+                      <ThumbnailPreview file={item} className="w-7 h-7 flex-shrink-0" />
                     )}
-                    <span className="truncate" title={item.name}>
+                    <span className="text-sm font-medium text-text-primary truncate" title={item.name}>
                       {item.name}
                     </span>
                   </div>
                 </td>
-                <td className="td-size">
+                <td className="py-3 px-4 text-xs text-text-secondary whitespace-nowrap">
                   {item.isFolder ? '—' : formatBytes(item.size_bytes)}
                 </td>
-                <td className="td-date">
+                <td className="py-3 px-4 text-xs text-text-secondary whitespace-nowrap">
                   {formatDate(item.updated_at || item.created_at)}
                 </td>
-                <td className="td-actions">
+                <td className="py-3 px-4 text-right">
                   <button
                     type="button"
-                    className="action-icon-btn"
+                    className="p-1.5 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-surface-hover transition-colors"
                     onClick={(e) => {
                       e.stopPropagation();
                       onContextMenu(item, { x: e.clientX, y: e.clientY });
                     }}
                     aria-label={`Actions for ${item.name}`}
                   >
-                    <svg className="w-4 h-4 text-slate-400 hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                     </svg>
                   </button>

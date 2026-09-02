@@ -53,14 +53,12 @@ export function FilePreviewModal({
 }: FilePreviewModalProps) {
   const { toast } = useToast();
   const [streamUrl, setStreamUrl] = useState<string | null>(null);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   // Video playback & control state
   const videoRef = useRef<HTMLVideoElement>(null);
   const [playbackRate, setPlaybackRate] = useState<number>(1);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
   const [videoDuration, setVideoDuration] = useState<number | null>(null);
   const [videoCurrentTime, setVideoCurrentTime] = useState<number>(0);
 
@@ -103,31 +101,25 @@ export function FilePreviewModal({
   // Fetch file URLs on open / file switch
   useEffect(() => {
     if (!isOpen || !file) {
-      setStreamUrl(null);
-      setDownloadUrl(null);
-      setTextContent(null);
-      setZoom(1);
-      setRotation(0);
-      setPlaybackRate(1);
-      setIsVideoPlaying(false);
       return;
     }
 
     let isMounted = true;
-    setIsLoading(true);
-    setError(null);
-    setTextContent(null);
-    setZoom(1);
-    setRotation(0);
-    setPlaybackRate(1);
-    setIsVideoPlaying(false);
+    void Promise.resolve().then(() => {
+      if (!isMounted) return;
+      setIsLoading(true);
+      setError(null);
+      setTextContent(null);
+      setZoom(1);
+      setRotation(0);
+      setPlaybackRate(1);
+    });
 
     getFileDetails(file.id)
       .then((data) => {
         if (!isMounted) return;
         const sUrl = data.streamUrl || data.downloadUrl;
         setStreamUrl(sUrl);
-        setDownloadUrl(data.downloadUrl);
         setIsLoading(false);
 
         // If it's a text file, fetch content
@@ -525,8 +517,6 @@ export function FilePreviewModal({
               autoPlay
               playsInline
               preload="auto"
-              onPlay={() => setIsVideoPlaying(true)}
-              onPause={() => setIsVideoPlaying(false)}
               onTimeUpdate={() => {
                 if (videoRef.current) {
                   setVideoCurrentTime(videoRef.current.currentTime);
@@ -571,6 +561,7 @@ export function FilePreviewModal({
           </div>
         ) : previewType === 'image' && streamUrl ? (
           <div className="w-full h-full flex items-center justify-center overflow-auto p-2">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={streamUrl}
               alt={file.name}

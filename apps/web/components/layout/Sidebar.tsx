@@ -83,19 +83,21 @@ export function Sidebar({ onNavigate }: SidebarProps) {
   const usedPercentage = Math.min(100, Math.max(usedBytes > 0 ? 1 : 0, (usedBytes / TOTAL_STORAGE_BYTES) * 100));
 
   return (
-    <aside className="sidebar">
-      <div className="sidebar-brand">
-        <div className="w-8 h-8 rounded-[8px] bg-[#6366F11A] border border-[#6366F133] flex items-center justify-center text-[#6366F1]">
+    <aside className="w-[240px] flex flex-col bg-bg-surface border-r border-border-subtle py-5 px-3 flex-shrink-0 overflow-y-auto">
+      {/* Brand */}
+      <div className="flex items-center gap-2.5 px-3 pb-5 border-b border-border-subtle mb-4">
+        <div className="w-8 h-8 rounded-lg bg-[#6366F11A] border border-[#6366F133] flex items-center justify-center text-accent">
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <circle cx="12" cy="12" r="9" strokeWidth={1.75} />
             <path strokeLinecap="round" strokeWidth={1.75} d="M3.6 9h16.8M3.6 15h16.8" />
           </svg>
         </div>
-        <span className="sidebar-title">Orbit</span>
+        <span className="text-lg font-bold text-text-primary tracking-[-0.3px]">Orbit</span>
       </div>
 
-      <nav className="sidebar-nav" aria-label="Main navigation">
-        <ul role="list">
+      {/* Navigation */}
+      <nav className="flex-1" aria-label="Main navigation">
+        <ul role="list" className="flex flex-col gap-1 list-none">
           {NAV_ITEMS.map(({ section, label, href, icon: IconComponent }) => {
             const isActive = pathname.startsWith(`/${section}`) ||
               (section === 'drive' && (pathname === '/drive' || pathname === '/'));
@@ -103,12 +105,16 @@ export function Sidebar({ onNavigate }: SidebarProps) {
               <li key={section}>
                 <Link
                   href={href}
-                  className={`sidebar-item${isActive ? ' sidebar-item--active' : ''}`}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-accent/10 text-accent font-semibold'
+                      : 'text-text-secondary hover:bg-bg-surface-hover hover:text-text-primary'
+                  }`}
                   aria-current={isActive ? 'page' : undefined}
                   onClick={() => onNavigate?.(section)}
                 >
-                  <IconComponent className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-[#6366F1]' : 'text-[#8B8B96]'}`} />
-                  <span className="sidebar-item-label">{label}</span>
+                  <IconComponent className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-accent' : 'text-text-secondary'}`} />
+                  <span className="flex-1">{label}</span>
                 </Link>
               </li>
             );
@@ -116,19 +122,20 @@ export function Sidebar({ onNavigate }: SidebarProps) {
         </ul>
       </nav>
 
-      <div className="sidebar-footer">
-        <div className="storage-bar">
-          <div className="flex items-center justify-between text-xs text-[#8B8B96] mb-1">
-            <span className="font-medium text-[#F5F5F7]">Storage</span>
+      {/* Storage Footer */}
+      <div className="mt-auto pt-5">
+        <div className="flex flex-col gap-1.5 px-1">
+          <div className="flex items-center justify-between text-xs text-text-secondary mb-0.5">
+            <span className="font-medium text-text-primary">Storage</span>
             <span>{usedPercentage.toFixed(1)}%</span>
           </div>
-          <div className="storage-bar-track">
+          <div className="h-[5px] bg-bg-surface-hover rounded-full overflow-hidden">
             <div
-              className="storage-bar-fill"
+              className="h-full bg-accent rounded-full transition-all duration-300"
               style={{ width: `${usedPercentage}%` }}
             />
           </div>
-          <span className="storage-label">
+          <span className="text-xs text-text-secondary">
             {formatBytes(usedBytes)} of 15 GB used
           </span>
         </div>

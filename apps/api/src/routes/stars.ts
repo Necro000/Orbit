@@ -31,7 +31,7 @@ router.get('/', (req: AuthenticatedRequest, res: Response): void => {
     const foldersRes = await db.query<FolderRow & { is_starred: boolean }>(foldersQuery, [userId]);
 
     const filesQuery = `
-      SELECT fl.id, fl.name, fl.mime_type, fl.size_bytes, fl.checksum, fl.status, fl.created_at, fl.updated_at, true as is_starred
+      SELECT fl.id, fl.name, fl.mime_type, fl.size_bytes, fl.checksum, fl.status, fl.owner_id, fl.folder_id, fl.created_at, fl.updated_at, true as is_starred
       FROM stars s
       INNER JOIN files fl ON fl.id = s.resource_id AND fl.is_deleted = false AND fl.status = 'ready'
       WHERE s.user_id = $1 AND s.resource_type = 'file'

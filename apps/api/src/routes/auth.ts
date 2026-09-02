@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import bcrypt from 'bcryptjs';
-import type { Request, Response, IRouter } from 'express';
+import type { Request, Response, NextFunction, IRouter } from 'express';
 import { Router } from 'express';
 
 import { db } from '../db';
@@ -35,7 +35,7 @@ interface TokenRow {
 }
 
 // ─── POST /api/auth/register ──────────────────────────────────────────────────
-router.post('/register', (req: Request, res: Response): void => {
+router.post('/register', (req: Request, res: Response, next: NextFunction): void => {
   void (async () => {
     const parsed = RegisterSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -88,11 +88,11 @@ router.post('/register', (req: Request, res: Response): void => {
     res.status(201).json({
       user: { id: user.id, email: user.email, name: user.name, createdAt: user.created_at },
     });
-  })();
+  })().catch(next);
 });
 
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
-router.post('/login', (req: Request, res: Response): void => {
+router.post('/login', (req: Request, res: Response, next: NextFunction): void => {
   void (async () => {
     const parsed = LoginSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -136,11 +136,11 @@ router.post('/login', (req: Request, res: Response): void => {
     res.status(200).json({
       user: { id: user.id, email: user.email, name: user.name, imageUrl: user.image_url },
     });
-  })();
+  })().catch(next);
 });
 
 // ─── POST /api/auth/refresh ───────────────────────────────────────────────────
-router.post('/refresh', (req: Request, res: Response): void => {
+router.post('/refresh', (req: Request, res: Response, next: NextFunction): void => {
   void (async () => {
     const cookies = req.cookies as Record<string, string | undefined> | undefined;
     const rawRefreshToken = cookies?.[REFRESH_COOKIE];
@@ -205,11 +205,11 @@ router.post('/refresh', (req: Request, res: Response): void => {
 
     setAuthCookies(res, { accessToken: newAccessToken, refreshToken: newRefreshToken });
     res.status(200).json({ ok: true });
-  })();
+  })().catch(next);
 });
 
 // ─── POST /api/auth/logout ────────────────────────────────────────────────────
-router.post('/logout', authenticate, (req: AuthenticatedRequest, res: Response): void => {
+router.post('/logout', authenticate, (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
   void (async () => {
     const cookies = req.cookies as Record<string, string | undefined> | undefined;
     const rawRefreshToken = cookies?.[REFRESH_COOKIE];
@@ -228,11 +228,11 @@ router.post('/logout', authenticate, (req: AuthenticatedRequest, res: Response):
 
     clearAuthCookies(res);
     res.status(200).json({ ok: true });
-  })();
+  })().catch(next);
 });
 
 // ─── GET /api/auth/me ─────────────────────────────────────────────────────────
-router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response): void => {
+router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
   void (async () => {
     const userId = req.user?.id;
     if (!userId) {
@@ -242,7 +242,7 @@ router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response): void
 
     const result = await db.query<UserRow & { storage_used_bytes?: string | number }>(
       `SELECT u.id, u.email, u.name, u.image_url, u.created_at,
-              COALESCE((SELECT SUM(size_bytes) FROM files WHERE owner_id = u.id AND status != 'trashed'), 0) AS storage_used_bytes
+              COALESCE((SELECT SUM(size_bytes) FROM files WHERE owner_id = u.id AND is_deleted = false AND status = 'ready'), 0) AS storage_used_bytes
        FROM users u
        WHERE u.id = $1`,
       [userId],
@@ -265,7 +265,7 @@ router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response): void
         storageUsedBytes,
       },
     });
-  })();
+  })().catch(next);
 });
 
 export default router;

@@ -19,14 +19,14 @@ export function FileGrid({ items, selectedIds, onSelect, onOpen, onContextMenu }
 
   if (items.length === 0) {
     return (
-      <div className="empty-state">
-        <div className="w-16 h-16 rounded-[10px] bg-[#1A1A22] border border-[#2A2A35] flex items-center justify-center text-[#8B8B96] mb-3">
+      <div className="empty-state flex flex-col items-center justify-center min-h-[300px] text-center p-8">
+        <div className="w-16 h-16 rounded-[10px] bg-bg-surface border border-border-subtle flex items-center justify-center text-text-secondary mb-3">
           <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
         </div>
-        <h3 className="text-base font-semibold text-[#F5F5F7]">This folder is empty</h3>
-        <p className="text-xs text-[#8B8B96] max-w-sm text-center">
+        <h3 className="text-base font-semibold text-text-primary">This folder is empty</h3>
+        <p className="text-xs text-text-secondary max-w-sm text-center mt-1">
           Drag and drop files here, or use the Upload button in the toolbar above.
         </p>
       </div>
@@ -34,14 +34,15 @@ export function FileGrid({ items, selectedIds, onSelect, onOpen, onContextMenu }
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px]">
+    <div className="space-y-6 w-full">
+      {/* Folders Section */}
       {folders.length > 0 && (
         <section aria-label="Folders">
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-[12px] font-semibold text-[#8B8B96] uppercase tracking-[0.05em]">
-              Folders
+            <h3 className="text-xs uppercase tracking-wider font-semibold text-text-secondary">
+              FOLDERS
             </h3>
-            <span className="text-[12px] text-[#8B8B96]">
+            <span className="text-xs text-text-secondary">
               • {folders.length} {folders.length === 1 ? 'folder' : 'folders'}
             </span>
           </div>
@@ -51,11 +52,10 @@ export function FileGrid({ items, selectedIds, onSelect, onOpen, onContextMenu }
               return (
                 <div
                   key={folder.id}
-                  className={`group relative flex items-center gap-3 p-3 rounded-[10px] transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#6366F11A] border-2 border-[#6366F1] shadow-md shadow-[#6366F120]'
-                      : 'bg-[#1A1A22] hover:bg-[#22222C] border border-[#2A2A35] hover:shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
-                  }`}
+                  className={`group relative flex items-center gap-3 bg-bg-surface rounded-[10px] p-3 hover:bg-bg-surface-hover transition-all duration-200 shadow-sm cursor-pointer select-none border ${isSelected
+                      ? 'border-accent bg-accent/10 shadow-accent/20'
+                      : 'border-border-subtle'
+                    }`}
                   onClick={(e) => onSelect(folder.id, e.ctrlKey || e.metaKey)}
                   onDoubleClick={() => onOpen(folder)}
                   onContextMenu={(e) => {
@@ -66,12 +66,13 @@ export function FileGrid({ items, selectedIds, onSelect, onOpen, onContextMenu }
                   tabIndex={0}
                   aria-pressed={isSelected}
                 >
+                  {/* Folder Icon Tint: bg-[#F5C84C1A] text-[#F5C84C] */}
                   <div className="w-9 h-9 rounded-lg bg-[#F5C84C1A] border border-[#F5C84C33] flex items-center justify-center text-[#F5C84C] flex-shrink-0">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                     </svg>
                   </div>
-                  <span className="text-sm font-medium text-[#F5F5F7] truncate flex-1" title={folder.name}>
+                  <span className="text-sm font-medium text-text-primary truncate flex-1" title={folder.name}>
                     {folder.name}
                   </span>
                 </div>
@@ -81,13 +82,14 @@ export function FileGrid({ items, selectedIds, onSelect, onOpen, onContextMenu }
         </section>
       )}
 
+      {/* Files Section */}
       {files.length > 0 && (
         <section aria-label="Files">
           <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-[12px] font-semibold text-[#8B8B96] uppercase tracking-[0.05em]">
-              Files
+            <h3 className="text-xs uppercase tracking-wider font-semibold text-text-secondary">
+              FILES
             </h3>
-            <span className="text-[12px] text-[#8B8B96]">
+            <span className="text-xs text-text-secondary">
               • {files.length} {files.length === 1 ? 'file' : 'files'}
             </span>
           </div>
@@ -97,11 +99,10 @@ export function FileGrid({ items, selectedIds, onSelect, onOpen, onContextMenu }
               return (
                 <div
                   key={file.id}
-                  className={`group relative flex flex-col p-3 rounded-[10px] transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#6366F11A] border-2 border-[#6366F1] shadow-md shadow-[#6366F120]'
-                      : 'bg-[#1A1A22] hover:bg-[#22222C] border border-[#2A2A35] hover:shadow-[0_2px_8px_rgba(0,0,0,0.3)]'
-                  }`}
+                  className={`group relative flex flex-col bg-bg-surface rounded-[10px] p-3 hover:bg-bg-surface-hover transition-all duration-200 shadow-sm cursor-pointer select-none border ${isSelected
+                      ? 'border-accent bg-accent/10 shadow-accent/20'
+                      : 'border-border-subtle'
+                    }`}
                   onClick={(e) => onSelect(file.id, e.ctrlKey || e.metaKey)}
                   onDoubleClick={() => onOpen(file)}
                   onContextMenu={(e) => {
@@ -112,14 +113,14 @@ export function FileGrid({ items, selectedIds, onSelect, onOpen, onContextMenu }
                   tabIndex={0}
                   aria-pressed={isSelected}
                 >
-                  <div className="w-full h-32 rounded-lg overflow-hidden mb-2.5 bg-[#0F0F14] border border-[#2A2A35] flex items-center justify-center">
+                  <div className="w-full h-32 rounded-lg overflow-hidden mb-2.5 bg-bg-surface flex items-center justify-center">
                     <ThumbnailPreview file={file} className="w-full h-full" />
                   </div>
                   <div className="flex flex-col gap-0.5 min-w-0">
-                    <span className="text-sm font-medium text-[#F5F5F7] truncate" title={file.name}>
+                    <span className="text-sm font-medium text-text-primary truncate" title={file.name}>
                       {file.name}
                     </span>
-                    <span className="text-[12px] text-[#8B8B96]">
+                    <span className="text-xs text-text-secondary">
                       {formatBytes(file.size_bytes)}
                     </span>
                   </div>

@@ -8,6 +8,7 @@
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
     "typecheck": "pnpm -r typecheck",
+    "db:migrate": "pnpm --filter @orbit/api db:migrate",
     "format": "prettier --write ."
   },
   "devDependencies": {

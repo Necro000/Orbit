@@ -55,13 +55,28 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(generalRateLimiter);
 
-// Health-check
+// Health-checks
 app.get('/', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', app: 'orbit-api', phase: 4, mvp: true });
+  res.json({ status: 'ok', app: 'orbit-api', phase: 5, mvp: true });
 });
 
-// Direct storage endpoints for dev local disk adapter
-app.use('/storage-dev', storageDevRouter);
+app.get('/health', (_req: Request, res: Response): void => {
+  void (async () => {
+    try {
+      const { db } = await import('./db');
+      await db.query('SELECT 1');
+      res.json({ status: 'healthy', database: 'connected', timestamp: new Date().toISOString() });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'DB unreachable';
+      res.status(503).json({ status: 'degraded', database: 'disconnected', error: msg, timestamp: new Date().toISOString() });
+    }
+  })();
+});
+
+// Direct storage endpoints for dev local disk adapter (dev only — never expose in production)
+if (process.env['NODE_ENV'] !== 'production') {
+  app.use('/storage-dev', storageDevRouter);
+}
 
 // Core API routes
 app.use('/api/auth', authRouter);

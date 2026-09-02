@@ -31,6 +31,7 @@ import { useRenameFile, useDeleteFile, downloadFile, uploadFileDirect } from '@/
 import { useToggleStar } from '@/lib/stars';
 import { useRestoreTrash } from '@/lib/trash';
 import { useSearch, type SearchFilters } from '@/lib/search';
+import { getOrGenerateShareLink } from '@/lib/shares';
 
 function DriveContent() {
   const router = useRouter();
@@ -209,6 +210,15 @@ function DriveContent() {
     });
   };
 
+  const handleCopyLinkDirect = async (item: DriveItem) => {
+    try {
+      await getOrGenerateShareLink(item.isFolder ? 'folder' : 'file', item.id);
+      toast({ type: 'success', message: 'Link copied to clipboard!' });
+    } catch {
+      toast({ type: 'error', message: 'Failed to copy share link.' });
+    }
+  };
+
   return (
     <AppShell
       breadcrumbPath={isSearching ? [{ id: 'search', name: 'Search Results' }] : (folderQuery.data?.path || [])}
@@ -226,7 +236,7 @@ function DriveContent() {
     >
       <div className="flex flex-col h-full">
         {/* Search and Filters Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-slate-800/80">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 mb-4 border-b border-border-subtle">
           <SearchBar
             value={searchQuery}
             onChange={setSearchQuery}
@@ -234,6 +244,7 @@ function DriveContent() {
           />
           <FilterChips filters={filters} onFilterChange={setFilters} />
         </div>
+
 
         <div className="flex-1 flex overflow-hidden">
           <div className="flex-1 overflow-y-auto">
@@ -300,6 +311,7 @@ function DriveContent() {
         onDelete={(item) => setDeleteItem(item)}
         onShare={(item) => setShareItem(item)}
         onPublicLink={(item) => setLinkItem(item)}
+        onCopyLink={handleCopyLinkDirect}
         onToggleStar={handleToggleStarAction}
         onDetails={(item) => setDetailsItem(item)}
       />

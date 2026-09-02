@@ -56,13 +56,19 @@ Quick start with Docker:
 docker compose -f infra/docker-compose.yml up -d
 ```
 
-Apply database migrations:
+Apply all database migrations automatically:
 ```bash
-# Example applying migrations sequentially
+# Automatically applies migrations 001 through 005 idempotently
+pnpm db:migrate
+```
+
+Or manually using `psql`:
+```bash
 psql "postgres://orbit:orbit_secret@localhost:5432/orbit" -f infra/migrations/001_users.sql
 psql "postgres://orbit:orbit_secret@localhost:5432/orbit" -f infra/migrations/002_folders_and_files.sql
 psql "postgres://orbit:orbit_secret@localhost:5432/orbit" -f infra/migrations/003_shares_and_search.sql
 psql "postgres://orbit:orbit_secret@localhost:5432/orbit" -f infra/migrations/004_trash_and_activity.sql
+psql "postgres://orbit:orbit_secret@localhost:5432/orbit" -f infra/migrations/005_file_versions.sql
 ```
 
 ### 3. Environment Variables
@@ -86,6 +92,18 @@ pnpm test
 # Run typechecks and production builds
 pnpm build
 ```
+
+### 5. Production Docker Deployment
+
+Deploy the entire Orbit stack (PostgreSQL, Redis, Express API, Next.js Web) in production mode:
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+Check service health:
+- API Healthcheck: `GET http://localhost:8080/health`
+- Web Dashboard: `http://localhost:3000`
 
 ---
 

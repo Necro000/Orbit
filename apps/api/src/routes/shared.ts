@@ -28,7 +28,7 @@ router.get('/', (req: AuthenticatedRequest, res: Response): void => {
     const foldersRes = await db.query<FolderRow & { role: string; owner_name: string; is_starred: boolean }>(foldersQuery, [userId]);
 
     const filesQuery = `
-      SELECT fl.id, fl.name, fl.mime_type, fl.size_bytes, fl.checksum, fl.status, fl.owner_id, fl.created_at, fl.updated_at, s.role,
+      SELECT fl.id, fl.name, fl.mime_type, fl.size_bytes, fl.checksum, fl.status, fl.owner_id, fl.folder_id, fl.created_at, fl.updated_at, s.role,
              u.name as owner_name, u.email as owner_email,
              CASE WHEN st.user_id IS NOT NULL THEN true ELSE false END as is_starred
       FROM shares s

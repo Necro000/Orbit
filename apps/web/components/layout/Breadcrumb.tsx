@@ -21,28 +21,26 @@ export function Breadcrumb({ path = [], onNavigate }: BreadcrumbProps) {
 
   if (path.length === 0) {
     return (
-      <nav aria-label="Breadcrumb" className="breadcrumb">
-        <ol className="breadcrumb-list">
-          <li className="breadcrumb-item breadcrumb-item--current" aria-current="page">
-            My Drive
-          </li>
-        </ol>
+      <nav aria-label="Breadcrumb" className="py-3">
+        <h1 className="text-[22px] font-semibold text-text-primary">
+          My Drive
+        </h1>
       </nav>
     );
   }
 
   return (
-    <nav aria-label="Breadcrumb" className="breadcrumb">
-      <ol className="breadcrumb-list">
-        <li className="breadcrumb-item">
+    <nav aria-label="Breadcrumb" className="py-3">
+      <ol className="flex items-center flex-wrap gap-1.5 list-none">
+        <li className="flex items-center gap-1.5">
           <button
             type="button"
-            className="breadcrumb-link"
+            className="text-[22px] font-semibold text-accent hover:underline transition-colors"
             onClick={() => onNavigate?.('root')}
           >
             My Drive
           </button>
-          <span className="breadcrumb-sep" aria-hidden="true">/</span>
+          <span className="text-text-secondary text-[20px]" aria-hidden="true">/</span>
         </li>
 
         {visibleSegments.map((seg, i) => {
@@ -50,23 +48,23 @@ export function Breadcrumb({ path = [], onNavigate }: BreadcrumbProps) {
           const isEllipsis = seg.id === '…';
 
           return (
-            <li key={seg.id} className="breadcrumb-item">
+            <li key={seg.id} className="flex items-center gap-1.5">
               {isEllipsis ? (
-                <span className="breadcrumb-ellipsis">…</span>
+                <span className="text-text-secondary px-1 text-base">…</span>
               ) : isLast ? (
-                <span className="breadcrumb-item--current" aria-current="page">
+                <h1 className="text-[22px] font-semibold text-text-primary" aria-current="page">
                   {seg.name}
-                </span>
+                </h1>
               ) : (
                 <>
                   <button
                     type="button"
-                    className="breadcrumb-link"
+                    className="text-[22px] font-semibold text-accent hover:underline transition-colors"
                     onClick={() => onNavigate?.(seg.id)}
                   >
                     {seg.name}
                   </button>
-                  <span className="breadcrumb-sep" aria-hidden="true">/</span>
+                  <span className="text-text-secondary text-[20px]" aria-hidden="true">/</span>
                 </>
               )}
             </li>

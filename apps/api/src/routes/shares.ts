@@ -78,8 +78,16 @@ router.post('/', (req: AuthenticatedRequest, res: Response): void => {
     const result = await db.query<ShareRow>(query, [resourceType, resourceId, targetGranteeId, role, userId]);
     const share = result.rows[0];
 
+    const granteeUserRes = await db.query<{ name: string; email: string }>('SELECT name, email FROM users WHERE id = $1', [targetGranteeId]);
+    const granteeUser = granteeUserRes.rows[0];
+    const fullShare = {
+      ...share,
+      grantee_name: granteeUser?.name,
+      grantee_email: granteeUser?.email,
+    };
+
     await logActivity(userId, 'share', resourceType, resourceId, { granteeUserId: targetGranteeId, role });
-    res.status(200).json({ share });
+    res.status(200).json({ share: fullShare });
   })();
 });
 
@@ -109,7 +117,23 @@ router.get('/:resourceType/:resourceId', (req: AuthenticatedRequest, res: Respon
       ORDER BY s.created_at ASC;
     `;
     const result = await db.query<ShareRow>(query, [resourceType, resourceId]);
-    res.json({ shares: result.rows });
+
+    const ownerQuery =
+      resourceType === 'folder'
+        ? 'SELECT u.id, u.name, u.email FROM folders f JOIN users u ON u.id = f.owner_id WHERE f.id = $1'
+        : 'SELECT u.id, u.name, u.email FROM files fl JOIN users u ON u.id = fl.owner_id WHERE fl.id = $1';
+    const ownerRes = await db.query<{ id: string; name: string; email: string }>(ownerQuery, [resourceId]);
+    const owner = ownerRes.rows[0] || null;
+
+    res.json({
+      shares: result.rows,
+      owner,
+      userAccess: {
+        isOwner: access.isOwner,
+        canManageAcl: access.canManageAcl,
+        role: access.role,
+      },
+    });
   })();
 });
 

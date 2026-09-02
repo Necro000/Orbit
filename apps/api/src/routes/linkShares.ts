@@ -84,10 +84,25 @@ router.post('/link-shares', authenticate, (req: AuthenticatedRequest, res: Respo
     ]);
 
     await logActivity(userId, 'share', resourceType, resourceId, { publicLink: true, token });
+    const createdRow = result.rows[0];
+    if (!createdRow) {
+      res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to create link share.' } });
+      return;
+    }
     res.status(201).json({
       linkShare: {
-        ...result.rows[0],
+        id: createdRow.id,
+        resourceType: createdRow.resource_type,
+        resourceId: createdRow.resource_id,
+        token: createdRow.token,
+        role: createdRow.role,
         hasPassword: Boolean(passwordHash),
+        expiresAt: createdRow.expires_at,
+        createdAt: createdRow.created_at,
+        resource_type: createdRow.resource_type,
+        resource_id: createdRow.resource_id,
+        expires_at: createdRow.expires_at,
+        created_at: createdRow.created_at,
       },
     });
   })();

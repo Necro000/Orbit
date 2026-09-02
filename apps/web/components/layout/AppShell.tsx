@@ -15,8 +15,8 @@ export interface AppShellProps {
 
 /**
  * AppShell — top-level authenticated layout.
- * Composes <Sidebar>, <Toolbar>, <Breadcrumb>, <ToastProvider>, and the main content slot.
- * Per ui-components.md §1.
+ * Sets main background to bg-bg-base (#0F0F14).
+ * Enforces max-width: 1400px centered layout per design-system.md §6.
  */
 export function AppShell({
   children,
@@ -26,17 +26,19 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <ToastProvider>
-      <div className="app-shell">
+      <div className="flex h-screen overflow-hidden bg-bg-base text-text-primary font-sans">
         <Sidebar />
 
-        <div className="app-main">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
           <Toolbar {...toolbarProps} />
 
-          <div className="app-content">
-            <Breadcrumb path={breadcrumbPath} onNavigate={onNavigateBreadcrumb} />
-            <main className="app-content-area" id="main-content">
-              {children}
-            </main>
+          <div className="flex-1 flex flex-col overflow-y-auto px-6 pb-6">
+            <div className="w-full max-w-[1400px] mx-auto flex-1 flex flex-col">
+              <Breadcrumb path={breadcrumbPath} onNavigate={onNavigateBreadcrumb} />
+              <main className="flex-1 pt-4" id="main-content">
+                {children}
+              </main>
+            </div>
           </div>
         </div>
       </div>

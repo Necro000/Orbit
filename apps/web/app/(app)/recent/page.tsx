@@ -15,6 +15,7 @@ import { useToast } from '@/components/ui/Toast';
 import { useRecent } from '@/lib/search';
 import { useToggleStar } from '@/lib/stars';
 import { downloadFile } from '@/lib/files';
+import { getOrGenerateShareLink } from '@/lib/shares';
 import type { DriveItem, FileItem } from '@/lib/folders';
 
 export default function RecentPage() {
@@ -57,6 +58,15 @@ export default function RecentPage() {
       });
     } catch {
       toast({ type: 'error', message: 'Failed to update star.' });
+    }
+  };
+
+  const handleCopyLinkDirect = async (item: DriveItem) => {
+    try {
+      await getOrGenerateShareLink(item.isFolder ? 'folder' : 'file', item.id);
+      toast({ type: 'success', message: 'Link copied to clipboard!' });
+    } catch {
+      toast({ type: 'error', message: 'Failed to copy share link.' });
     }
   };
 
@@ -122,7 +132,7 @@ export default function RecentPage() {
         onRename={() => {}}
         onDelete={() => {}}
         onShare={(item) => setShareItem(item)}
-        onPublicLink={(item) => setLinkItem(item)}
+        onCopyLink={handleCopyLinkDirect}
         onToggleStar={handleToggleStar}
         onDetails={(item) => setDetailsItem(item)}
       />

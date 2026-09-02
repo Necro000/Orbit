@@ -13,6 +13,7 @@ export interface ContextMenuProps {
   onRename: (item: DriveItem) => void;
   onDelete: (item: DriveItem) => void;
   onShare?: (item: DriveItem) => void;
+  onCopyLink?: (item: DriveItem) => void;
   onPublicLink?: (item: DriveItem) => void;
   onToggleStar?: (item: DriveItem) => void;
   onDetails?: (item: DriveItem) => void;
@@ -27,6 +28,7 @@ export function ContextMenu({
   onRename,
   onDelete,
   onShare,
+  onCopyLink,
   onPublicLink,
   onToggleStar,
   onDetails,
@@ -57,6 +59,7 @@ export function ContextMenu({
 
   const isViewer = item.role === 'viewer';
   const isStarred = Boolean(item.is_starred);
+  const handleCopyLinkAction = onCopyLink || onPublicLink;
 
   return (
     <div
@@ -140,22 +143,22 @@ export function ContextMenu({
           }}
         >
           <Icon name="share" className="w-4 h-4" />
-          <span>Share...</span>
+          <span>Share</span>
         </button>
       )}
 
-      {onPublicLink && (
+      {handleCopyLinkAction && (
         <button
           type="button"
           className="context-menu-item"
           role="menuitem"
           onClick={() => {
-            onPublicLink(item);
+            handleCopyLinkAction(item);
             onClose();
           }}
         >
           <Icon name="link" className="w-4 h-4" />
-          <span>Get Public Link</span>
+          <span>Copy link</span>
         </button>
       )}
 

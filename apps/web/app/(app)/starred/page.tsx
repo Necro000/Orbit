@@ -14,6 +14,7 @@ import { DetailsPanel } from '@/components/drive/DetailsPanel';
 import { useToast } from '@/components/ui/Toast';
 import { useStarred, useToggleStar } from '@/lib/stars';
 import { downloadFile } from '@/lib/files';
+import { getOrGenerateShareLink } from '@/lib/shares';
 import type { DriveItem, FileItem } from '@/lib/folders';
 
 export default function StarredPage() {
@@ -53,6 +54,15 @@ export default function StarredPage() {
       toast({ type: 'success', message: `Unstarred ${item.name}` });
     } catch {
       toast({ type: 'error', message: 'Failed to unstar item.' });
+    }
+  };
+
+  const handleCopyLinkDirect = async (item: DriveItem) => {
+    try {
+      await getOrGenerateShareLink(item.isFolder ? 'folder' : 'file', item.id);
+      toast({ type: 'success', message: 'Link copied to clipboard!' });
+    } catch {
+      toast({ type: 'error', message: 'Failed to copy share link.' });
     }
   };
 
@@ -118,7 +128,7 @@ export default function StarredPage() {
         onRename={() => {}}
         onDelete={() => {}}
         onShare={(item) => setShareItem(item)}
-        onPublicLink={(item) => setLinkItem(item)}
+        onCopyLink={handleCopyLinkDirect}
         onToggleStar={handleToggleStar}
         onDetails={(item) => setDetailsItem(item)}
       />
