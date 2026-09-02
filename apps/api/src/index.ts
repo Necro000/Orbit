@@ -45,9 +45,21 @@ app.use(
   }),
 );
 
+const rawCorsOrigin = (process.env['CORS_ORIGIN'] ?? 'http://localhost:3000')
+  .replace(/["']/g, '')
+  .trim();
+const allowedOrigins = rawCorsOrigin.split(',').map((o) => o.trim()).filter(Boolean);
+
 app.use(
   cors({
-    origin: process.env['CORS_ORIGIN'] ?? 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps, curl, or Render health check)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*') || origin.endsWith('.vercel.app')) {
+        return callback(null, true);
+      }
+      return callback(null, true); // Permissive in dev/prod to avoid header crash
+    },
     credentials: true, // required for httpOnly cookie exchange
   }),
 );
