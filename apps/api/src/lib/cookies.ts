@@ -1,8 +1,8 @@
-import type { Response } from 'express';
+import type { CookieOptions, Response } from 'express';
 
 const IS_PROD = process.env['NODE_ENV'] === 'production';
 
-const BASE_COOKIE_OPTS = {
+const BASE_COOKIE_OPTS: CookieOptions = {
   httpOnly: true,
   secure: IS_PROD,
   sameSite: IS_PROD ? 'none' : 'lax',
