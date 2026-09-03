@@ -178,3 +178,19 @@ export async function uploadFileDirect(
 
   return completeRes.file;
 }
+
+export async function moveFile(fileId: string, targetFolderId: string | null): Promise<FileItem> {
+  const res = await apiFetch<{ file: FileItem }>(`/api/files/${fileId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ folderId: targetFolderId }),
+  });
+  return res.file;
+}
+
+export async function moveFolder(folderId: string, targetParentId: string | null): Promise<{ id: string; name: string }> {
+  const res = await apiFetch<{ folder: { id: string; name: string } }>(`/api/folders/${folderId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ parentId: targetParentId }),
+  });
+  return res.folder;
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { DriveItem, FolderItem, FileItem } from '@/lib/folders';
 import { formatBytes, formatDate } from '@/lib/format';
 import { getFileBadge, getFileCategory } from '@/lib/fileTints';
@@ -15,6 +15,8 @@ interface FileListProps {
   onToggleStar?: (item: DriveItem) => void;
   onDownload?: (file: FileItem) => void;
   onShare?: (item: DriveItem) => void;
+  onUploadToFolder?: (folderId: string, files: File[]) => void;
+  onMoveItem?: (itemId: string, isFolder: boolean, targetFolderId: string) => void;
 }
 
 export function FileList({
@@ -26,7 +28,10 @@ export function FileList({
   onToggleStar,
   onDownload,
   onShare,
+  onUploadToFolder,
+  onMoveItem,
 }: FileListProps) {
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const folders = items.filter((i): i is FolderItem => i.isFolder);
   const files = items.filter((i): i is FileItem => !i.isFolder);
   const sortedItems = [...folders, ...files];
@@ -66,6 +71,7 @@ export function FileList({
       <div className="flex flex-col gap-1 py-1.5" role="list">
         {sortedItems.map((item) => {
           const isSelected = selectedIds.includes(item.id);
+          const isDragOver = item.isFolder && dragOverFolderId === item.id;
           const category = item.isFolder
             ? 'folder'
             : getFileCategory(item.mime_type, false, item.name);
@@ -74,8 +80,46 @@ export function FileList({
           return (
             <div
               key={item.id}
+              draggable={true}
+              onDragStart={(e) => {
+                e.dataTransfer.setData('orbit/item-id', item.id);
+                e.dataTransfer.setData('orbit/is-folder', String(item.isFolder));
+                e.dataTransfer.effectAllowed = 'move';
+              }}
+              onDragOver={(e) => {
+                if (item.isFolder) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOverFolderId(item.id);
+                }
+              }}
+              onDragLeave={(e) => {
+                if (item.isFolder) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (dragOverFolderId === item.id) setDragOverFolderId(null);
+                }
+              }}
+              onDrop={(e) => {
+                if (item.isFolder) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setDragOverFolderId(null);
+                  const internalId = e.dataTransfer.getData('orbit/item-id');
+                  if (internalId) {
+                    if (internalId !== item.id) {
+                      const isFolder = e.dataTransfer.getData('orbit/is-folder') === 'true';
+                      onMoveItem?.(internalId, isFolder, item.id);
+                    }
+                  } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    onUploadToFolder?.(item.id, Array.from(e.dataTransfer.files));
+                  }
+                }
+              }}
               className={`group relative grid grid-cols-[1fr_110px_140px_160px] items-center px-4 py-2.5 rounded-xl transition-all duration-150 cursor-pointer select-none border ${
-                isSelected
+                isDragOver
+                  ? 'border-amber-400 bg-amber-400/20 ring-2 ring-amber-400/50 shadow-lg shadow-amber-400/10 scale-[1.01]'
+                  : isSelected
                   ? 'border-accent bg-accent/10 shadow-sm shadow-accent/5'
                   : 'border-transparent hover:border-border-subtle hover:bg-bg-surface-hover/70'
               }`}
@@ -90,7 +134,7 @@ export function FileList({
               tabIndex={0}
             >
               {/* Name Column */}
-              <div className="flex items-center gap-3 min-w-0 pr-3">
+              <div className={`flex items-center gap-3 min-w-0 pr-3 ${isDragOver ? 'pointer-events-none' : ''}`}>
                 {item.isFolder ? (
                   <div className="w-8 h-8 rounded-lg bg-[#F5C84C1A] border border-[#F5C84C33] flex items-center justify-center text-[#F5C84C] flex-shrink-0">
                     <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

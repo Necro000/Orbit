@@ -49,39 +49,33 @@ export default function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setError('');
 
     const cleanName = name.trim();
     const cleanEmail = email.trim().toLowerCase();
 
     if (cleanName.length < 2) {
-      const msg = 'Name must be at least 2 characters.';
-      setError(msg);
-      toast({ type: 'error', message: msg });
+      toast({ type: 'error', message: 'Name must be at least 2 characters.' });
       triggerShake();
       return;
     }
 
     if (/^\d+$/.test(cleanName)) {
-      const msg = 'Name cannot be numbers only. Please use letters or your real name.';
-      setError(msg);
-      toast({ type: 'error', message: msg });
+      toast({ type: 'error', message: 'Name cannot be numbers only. Please use letters or your real name.' });
       triggerShake();
       return;
     }
 
     if (!cleanEmail) {
-      const msg = 'Please enter a valid email address.';
-      setError(msg);
-      toast({ type: 'error', message: msg });
+      toast({ type: 'error', message: 'Please enter a valid email address.' });
       triggerShake();
       return;
     }
 
     if (passwordStrength.score < 5) {
-      const msg = 'Please choose a strong password (at least 8 chars, uppercase, lowercase, number, and special character).';
-      setError(msg);
-      toast({ type: 'error', message: msg });
+      toast({
+        type: 'error',
+        message: 'Please choose a strong password (at least 8 chars, uppercase, lowercase, number, and special character).',
+      });
       triggerShake();
       return;
     }
@@ -98,12 +92,9 @@ export default function RegisterPage() {
     } catch (err) {
       triggerShake();
       if (err instanceof ApiError) {
-        setError(err.message);
         toast({ type: 'error', message: err.message });
       } else {
-        const msg = 'Something went wrong. Please try again.';
-        setError(msg);
-        toast({ type: 'error', message: msg });
+        toast({ type: 'error', message: 'Something went wrong. Please try again.' });
       }
     } finally {
       setLoading(false);

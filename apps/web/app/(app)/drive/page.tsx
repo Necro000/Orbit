@@ -28,7 +28,7 @@ import {
   type DriveItem,
   type FileItem,
 } from '@/lib/folders';
-import { useRenameFile, useDeleteFile, downloadFile, uploadFileDirect } from '@/lib/files';
+import { useRenameFile, useDeleteFile, downloadFile, uploadFileDirect, moveFile, moveFolder } from '@/lib/files';
 import { useToggleStar } from '@/lib/stars';
 import { useRestoreTrash } from '@/lib/trash';
 import { useSearch, type SearchFilters } from '@/lib/search';
@@ -133,7 +133,8 @@ function DriveContent() {
     }
   }
 
-  async function handleFilesSelected(files: File[]) {
+  async function handleFilesSelected(files: File[], customFolderId?: string | null) {
+    const destFolderId = customFolderId !== undefined ? customFolderId : (folderId === 'root' ? null : folderId);
     for (const file of files) {
       const uploadId = crypto.randomUUID();
       setUploads((prev) => [
@@ -144,7 +145,7 @@ function DriveContent() {
       try {
         await uploadFileDirect(
           file,
-          folderId === 'root' ? null : folderId,
+          destFolderId,
           (pct) => {
             setUploads((prev) =>
               prev.map((u) => (u.id === uploadId ? { ...u, progressPercent: pct } : u)),
@@ -168,6 +169,27 @@ function DriveContent() {
         );
         toast({ type: 'error', message: `Failed to upload ${file.name}` });
       }
+    }
+  }
+
+  async function handleUploadToFolder(targetFolderId: string, files: File[]) {
+    await handleFilesSelected(files, targetFolderId);
+  }
+
+  async function handleMoveItem(itemId: string, isFolder: boolean, targetFolderId: string) {
+    try {
+      if (isFolder) {
+        await moveFolder(itemId, targetFolderId);
+        toast({ type: 'success', message: 'Folder moved successfully' });
+      } else {
+        await moveFile(itemId, targetFolderId);
+        toast({ type: 'success', message: 'File moved successfully' });
+      }
+      await queryClient.invalidateQueries({ queryKey: ['folder'] });
+      void folderQuery.refetch();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to move item';
+      toast({ type: 'error', message: msg });
     }
   }
 
@@ -284,6 +306,8 @@ function DriveContent() {
                       toast({ type: 'error', message: 'Failed to download file' });
                     });
                   }}
+                  onUploadToFolder={handleUploadToFolder}
+                  onMoveItem={handleMoveItem}
                 />
               ) : (
                 <FileList
@@ -299,6 +323,8 @@ function DriveContent() {
                     });
                   }}
                   onShare={(item) => setShareItem(item)}
+                  onUploadToFolder={handleUploadToFolder}
+                  onMoveItem={handleMoveItem}
                 />
               )}
             </UploadDropzone>

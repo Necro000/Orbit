@@ -2,6 +2,8 @@
 
 import { apiFetch } from '@/lib/api';
 import { useRouter } from 'next/navigation';
+import { useState, useRef, useEffect } from 'react';
+import { useCurrentUser } from '@/lib/auth';
 
 type ViewMode = 'grid' | 'list';
 type SortField = 'name' | 'date' | 'size';
@@ -15,6 +17,7 @@ export interface ToolbarProps {
   view?: ViewMode;
   onViewChange?: (view: ViewMode) => void;
   hasSelection?: boolean;
+  onOpenSettings?: () => void;
 }
 
 export function Toolbar({
@@ -26,8 +29,26 @@ export function Toolbar({
   view = 'grid',
   onViewChange,
   hasSelection = false,
+  onOpenSettings,
 }: ToolbarProps) {
   const router = useRouter();
+  const { data: currentUser } = useCurrentUser();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    }
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   async function handleLogout() {
     try {
@@ -144,15 +165,79 @@ export function Toolbar({
             </button>
           </div>
 
-          <button
-            id="toolbar-logout"
-            type="button"
-            className="px-3 py-1.5 rounded-lg bg-transparent hover:bg-bg-surface-hover text-text-secondary hover:text-rose-400 text-xs font-medium transition-colors whitespace-nowrap"
-            onClick={handleLogout}
-            aria-label="Sign out"
-          >
-            Sign out
-          </button>
+          {/* User Profile Avatar Pill & Dropdown */}
+          <div className="relative" ref={menuRef}>
+            <button
+              id="toolbar-user-menu"
+              type="button"
+              onClick={() => setIsMenuOpen((prev) => !prev)}
+              className="flex items-center gap-2 p-1.5 pr-2.5 rounded-full bg-slate-900/60 hover:bg-slate-800/80 border border-slate-700/60 text-slate-200 text-xs font-medium transition shadow-sm"
+              aria-expanded={isMenuOpen}
+              aria-label="User account menu"
+            >
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center font-bold text-white text-[11px] shadow-sm">
+                {currentUser?.name
+                  ? currentUser.name
+                      .split(' ')
+                      .map((p) => p[0])
+                      .slice(0, 2)
+                      .join('')
+                      .toUpperCase()
+                  : 'U'}
+              </div>
+              <span className="hidden sm:inline max-w-[100px] truncate text-slate-200">
+                {currentUser?.name || 'Account'}
+              </span>
+              <svg
+                className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${isMenuOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {/* Floating Glassmorphic Dropdown */}
+            {isMenuOpen && (
+              <div className="absolute right-0 mt-2 w-64 rounded-2xl bg-[#0f172a]/95 border border-slate-700/80 shadow-2xl backdrop-blur-xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                {/* User Info Header */}
+                <div className="px-3 py-2.5 border-b border-slate-800/80 mb-1">
+                  <p className="text-xs font-semibold text-white truncate">{currentUser?.name || 'Orbit User'}</p>
+                  <p className="text-[11px] text-slate-400 truncate">{currentUser?.email || ''}</p>
+                </div>
+
+                {/* Profile & Settings action */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    onOpenSettings?.();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-slate-300 hover:text-white hover:bg-indigo-600/20 hover:border-indigo-500/30 rounded-xl transition text-left"
+                >
+                  <span className="text-sm">⚙️</span>
+                  <span>Profile & Settings</span>
+                </button>
+
+                <div className="h-px bg-slate-800/80 my-1" />
+
+                {/* Sign out */}
+                <button
+                  id="toolbar-logout"
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs font-medium text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 rounded-xl transition text-left"
+                >
+                  <span className="text-sm">🚪</span>
+                  <span>Sign out</span>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </header>

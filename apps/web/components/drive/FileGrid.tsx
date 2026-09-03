@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import type { DriveItem, FolderItem, FileItem } from '@/lib/folders';
 import { formatBytes } from '@/lib/format';
 import { ThumbnailPreview } from './ThumbnailPreview';
@@ -13,6 +13,8 @@ interface FileGridProps {
   onContextMenu: (item: DriveItem, pos: { x: number; y: number }) => void;
   onToggleStar?: (item: DriveItem) => void;
   onDownload?: (item: FileItem) => void;
+  onUploadToFolder?: (folderId: string, files: File[]) => void;
+  onMoveItem?: (itemId: string, isFolder: boolean, targetFolderId: string) => void;
 }
 
 export function FileGrid({
@@ -23,7 +25,10 @@ export function FileGrid({
   onContextMenu,
   onToggleStar,
   onDownload,
+  onUploadToFolder,
+  onMoveItem,
 }: FileGridProps) {
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const folders = items.filter((i): i is FolderItem => i.isFolder);
   const files = items.filter((i): i is FileItem => !i.isFolder);
 
@@ -59,11 +64,45 @@ export function FileGrid({
           <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-4">
             {folders.map((folder) => {
               const isSelected = selectedIds.includes(folder.id);
+              const isDragOver = dragOverFolderId === folder.id;
+
               return (
                 <div
                   key={folder.id}
+                  draggable={true}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('orbit/item-id', folder.id);
+                    e.dataTransfer.setData('orbit/is-folder', 'true');
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragOverFolderId(folder.id);
+                  }}
+                  onDragLeave={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (dragOverFolderId === folder.id) setDragOverFolderId(null);
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setDragOverFolderId(null);
+                    const internalId = e.dataTransfer.getData('orbit/item-id');
+                    if (internalId) {
+                      if (internalId !== folder.id) {
+                        const isFolder = e.dataTransfer.getData('orbit/is-folder') === 'true';
+                        onMoveItem?.(internalId, isFolder, folder.id);
+                      }
+                    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                      onUploadToFolder?.(folder.id, Array.from(e.dataTransfer.files));
+                    }
+                  }}
                   className={`group relative flex items-center gap-3 bg-bg-surface rounded-xl p-3 hover:bg-bg-surface-hover hover:border-accent/40 hover:-translate-y-0.5 transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer select-none border ${
-                    isSelected
+                    isDragOver
+                      ? 'border-amber-400 bg-amber-400/20 ring-2 ring-amber-400/50 shadow-lg shadow-amber-400/10 scale-[1.03]'
+                      : isSelected
                       ? 'border-accent bg-accent/10 shadow-accent/20 ring-1 ring-accent'
                       : 'border-border-subtle'
                   }`}
@@ -78,12 +117,12 @@ export function FileGrid({
                   aria-pressed={isSelected}
                 >
                   {/* Folder Icon Tint */}
-                  <div className="w-9 h-9 rounded-lg bg-[#F5C84C1A] border border-[#F5C84C33] flex items-center justify-center text-[#F5C84C] flex-shrink-0">
+                  <div className={`w-9 h-9 rounded-lg bg-[#F5C84C1A] border border-[#F5C84C33] flex items-center justify-center text-[#F5C84C] flex-shrink-0 ${isDragOver ? 'pointer-events-none' : ''}`}>
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.75} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                     </svg>
                   </div>
-                  <span className="text-sm font-medium text-text-primary truncate flex-1" title={folder.name}>
+                  <span className={`text-sm font-medium text-text-primary truncate flex-1 ${isDragOver ? 'pointer-events-none' : ''}`} title={folder.name}>
                     {folder.name}
                   </span>
 
@@ -114,6 +153,12 @@ export function FileGrid({
               return (
                 <div
                   key={file.id}
+                  draggable={true}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('orbit/item-id', file.id);
+                    e.dataTransfer.setData('orbit/is-folder', 'false');
+                    e.dataTransfer.effectAllowed = 'move';
+                  }}
                   className={`group relative flex flex-col bg-bg-surface rounded-xl p-3 hover:bg-bg-surface-hover hover:border-accent/40 hover:-translate-y-0.5 transition-all duration-200 shadow-sm hover:shadow-md cursor-pointer select-none border ${
                     isSelected
                       ? 'border-accent bg-accent/10 shadow-accent/20 ring-1 ring-accent'

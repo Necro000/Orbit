@@ -15,7 +15,7 @@ import {
 import type { AuthenticatedRequest } from '../middleware/authenticate';
 import { authenticate } from '../middleware/authenticate';
 import { authRateLimiter } from '../middleware/rateLimiter';
-import { LoginSchema, RegisterSchema } from '../schemas/auth';
+import { ChangePasswordSchema, LoginSchema, RegisterSchema, UpdateProfileSchema } from '../schemas/auth';
 
 const router: IRouter = Router();
 const BCRYPT_ROUNDS = 12;
@@ -264,6 +264,156 @@ router.get('/me', authenticate, (req: AuthenticatedRequest, res: Response, next:
         imageUrl: user.image_url,
         createdAt: user.created_at,
         storageUsedBytes,
+      },
+    });
+  })().catch(next);
+});
+
+// ─── PATCH /api/auth/profile ──────────────────────────────────────────────────
+router.patch('/profile', authenticate, (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  void (async () => {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } });
+      return;
+    }
+
+    const parsed = UpdateProfileSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: firstIssue?.message ?? 'Invalid input.' },
+      });
+      return;
+    }
+
+    const { name } = parsed.data;
+    const result = await db.query<UserRow>(
+      'UPDATE users SET name = $1, updated_at = NOW() WHERE id = $2 RETURNING id, email, name, image_url, created_at',
+      [name, userId],
+    );
+
+    const updatedUser = result.rows[0];
+    if (!updatedUser) {
+      res.status(404).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found.' } });
+      return;
+    }
+
+    res.status(200).json({
+      user: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        imageUrl: updatedUser.image_url,
+        createdAt: updatedUser.created_at,
+      },
+    });
+  })().catch(next);
+});
+
+// ─── POST /api/auth/change-password ───────────────────────────────────────────
+router.post('/change-password', authenticate, (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  void (async () => {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } });
+      return;
+    }
+
+    const parsed = ChangePasswordSchema.safeParse(req.body);
+    if (!parsed.success) {
+      const firstIssue = parsed.error.issues[0];
+      res.status(400).json({
+        error: { code: 'VALIDATION_ERROR', message: firstIssue?.message ?? 'Invalid input.' },
+      });
+      return;
+    }
+
+    const { currentPassword, newPassword } = parsed.data;
+
+    const userRes = await db.query<{ password_hash: string }>(
+      'SELECT password_hash FROM users WHERE id = $1',
+      [userId],
+    );
+    const user = userRes.rows[0];
+    if (!user) {
+      res.status(404).json({ error: { code: 'USER_NOT_FOUND', message: 'User not found.' } });
+      return;
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isValid) {
+      res.status(400).json({
+        error: { code: 'INVALID_CURRENT_PASSWORD', message: 'The current password you entered is incorrect.' },
+      });
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      res.status(400).json({
+        error: { code: 'SAME_PASSWORD', message: 'New password cannot be the same as your current password.' },
+      });
+      return;
+    }
+
+    const newHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await db.query('UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2', [newHash, userId]);
+
+    // Invalidate refresh tokens for security
+    await db.query('DELETE FROM refresh_tokens WHERE user_id = $1', [userId]);
+
+    res.status(200).json({ ok: true, message: 'Password changed successfully.' });
+  })().catch(next);
+});
+
+// ─── GET /api/auth/storage-breakdown ──────────────────────────────────────────
+router.get('/storage-breakdown', authenticate, (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+  void (async () => {
+    const userId = req.user?.id;
+    if (!userId) {
+      res.status(401).json({ error: { code: 'UNAUTHORIZED', message: 'Authentication required.' } });
+      return;
+    }
+
+    const [activeRes, trashRes] = await Promise.all([
+      db.query<{ videos: string; audios: string; images: string; documents: string }>(
+        `SELECT
+           COALESCE(SUM(CASE WHEN mime_type LIKE 'video/%' THEN size_bytes ELSE 0 END), 0)::text AS videos,
+           COALESCE(SUM(CASE WHEN mime_type LIKE 'audio/%' THEN size_bytes ELSE 0 END), 0)::text AS audios,
+           COALESCE(SUM(CASE WHEN mime_type LIKE 'image/%' THEN size_bytes ELSE 0 END), 0)::text AS images,
+           COALESCE(SUM(CASE WHEN mime_type NOT LIKE 'video/%' AND mime_type NOT LIKE 'audio/%' AND mime_type NOT LIKE 'image/%' THEN size_bytes ELSE 0 END), 0)::text AS documents
+         FROM files
+         WHERE owner_id = $1 AND is_deleted = false AND status = 'ready'`,
+        [userId],
+      ),
+      db.query<{ trash: string }>(
+        `SELECT COALESCE(SUM(size_bytes), 0)::text AS trash
+         FROM files
+         WHERE owner_id = $1 AND is_deleted = true`,
+        [userId],
+      ),
+    ]);
+
+    const active = activeRes.rows[0] ?? { videos: '0', audios: '0', images: '0', documents: '0' };
+    const trash = trashRes.rows[0]?.trash ?? '0';
+
+    const videos = Number(active.videos);
+    const audios = Number(active.audios);
+    const images = Number(active.images);
+    const documents = Number(active.documents);
+    const trashBytes = Number(trash);
+    const totalUsed = videos + audios + images + documents + trashBytes;
+    const maxStorageBytes = 15 * 1024 * 1024 * 1024; // 15 GB
+
+    res.status(200).json({
+      breakdown: {
+        videos,
+        audios,
+        images,
+        documents,
+        trash: trashBytes,
+        totalUsed,
+        maxStorageBytes,
       },
     });
   })().catch(next);

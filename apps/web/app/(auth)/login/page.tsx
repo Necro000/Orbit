@@ -13,14 +13,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const [isInvalidCredentials, setIsInvalidCredentials] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
-    setIsInvalidCredentials(false);
 
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
@@ -50,8 +48,7 @@ export default function LoginPage() {
       triggerShake();
       if (err instanceof ApiError) {
         if (err.code === 'INVALID_CREDENTIALS' || err.status === 401) {
-          setIsInvalidCredentials(true);
-          setError('Invalid email or password. Please check your credentials or create an account.');
+          setError('Invalid email or password.');
           toast({ type: 'error', message: 'Invalid credentials! Wrong email or password entered.' });
         } else if (err.code === 'RATE_LIMIT_EXCEEDED' || err.status === 429) {
           const msg = err.message || 'Too many login attempts. Please wait 15 minutes before trying again.';
