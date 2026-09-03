@@ -58,7 +58,7 @@ describe('Auth Routes', () => {
 
       const res = await supertest(app)
         .post('/api/auth/register')
-        .send({ email: 'alice@example.com', name: 'Alice', password: 'password123' });
+        .send({ email: 'alice@example.com', name: 'Alice', password: 'Password123!' });
 
       expect(res.status).toBe(201);
       expect(res.body.user).toMatchObject({ email: 'alice@example.com', name: 'Alice' });
@@ -68,7 +68,7 @@ describe('Auth Routes', () => {
     it('rejects registration with an invalid email', async () => {
       const res = await supertest(app)
         .post('/api/auth/register')
-        .send({ email: 'not-an-email', name: 'Bob', password: 'password123' });
+        .send({ email: 'not-an-email', name: 'Bob', password: 'Password123!' });
 
       expect(res.status).toBe(400);
       expect(res.body.error.code).toBe('VALIDATION_ERROR');
@@ -88,10 +88,28 @@ describe('Auth Routes', () => {
 
       const res = await supertest(app)
         .post('/api/auth/register')
-        .send({ email: 'duplicate@example.com', name: 'Dup', password: 'password123' });
+        .send({ email: 'duplicate@example.com', name: 'Dup', password: 'Password123!' });
 
       expect(res.status).toBe(409);
       expect(res.body.error.code).toBe('DUPLICATE_EMAIL');
+    });
+
+    it('rejects registration with a purely numeric name', async () => {
+      const res = await supertest(app)
+        .post('/api/auth/register')
+        .send({ email: 'numeric@example.com', name: '123456', password: 'Password123!' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('rejects registration with a weak password missing special characters', async () => {
+      const res = await supertest(app)
+        .post('/api/auth/register')
+        .send({ email: 'weak@example.com', name: 'Weak User', password: 'Password123' });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 

@@ -12,8 +12,11 @@ function createSlidingLimiter(maxRequests: number, windowMs: number, customMessa
 
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
-    const userId = req.user?.id ?? 'anon';
-    const key = `${userId}:${ip}`;
+    const emailKey =
+      typeof req.body === 'object' && req.body && 'email' in req.body && typeof req.body.email === 'string'
+        ? req.body.email.trim().toLowerCase()
+        : (req.user?.id ?? 'anon');
+    const key = `${emailKey}:${ip}`;
     const now = Date.now();
 
     const record = hits.get(key);
@@ -51,3 +54,10 @@ export const uploadInitRateLimiter = createSlidingLimiter(
   5 * 60 * 1000,
   'Too many upload initialization requests. Please wait a few minutes before trying again.',
 );
+
+export const authRateLimiter = createSlidingLimiter(
+  5,
+  15 * 60 * 1000,
+  'Too many login attempts. Please wait 15 minutes before trying again.',
+);
+

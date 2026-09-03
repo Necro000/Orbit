@@ -15,6 +15,7 @@ import {
 import type { AuthenticatedRequest } from '../middleware/authenticate';
 import { authenticate } from '../middleware/authenticate';
 import { LoginSchema, RegisterSchema } from '../schemas/auth';
+import { authRateLimiter } from '../middleware/rateLimiter';
 
 const router: IRouter = Router();
 const BCRYPT_ROUNDS = 12;
@@ -92,7 +93,7 @@ router.post('/register', (req: Request, res: Response, next: NextFunction): void
 });
 
 // ─── POST /api/auth/login ─────────────────────────────────────────────────────
-router.post('/login', (req: Request, res: Response, next: NextFunction): void => {
+router.post('/login', authRateLimiter, (req: Request, res: Response, next: NextFunction): void => {
   void (async () => {
     const parsed = LoginSchema.safeParse(req.body);
     if (!parsed.success) {
