@@ -91,14 +91,12 @@ export function DetailsPanel({ item, onClose }: DetailsPanelProps) {
               </p>
             </div>
 
-            {!isFolder && (
-              <div>
-                <span className="text-slate-400 block mb-1">Size</span>
-                <p className="font-medium text-slate-200">
-                  {formatBytes(parseInt((item as FileItem).size_bytes, 10) || 0)}
-                </p>
-              </div>
-            )}
+            <div>
+              <span className="text-slate-400 block mb-1">Size</span>
+              <p className="font-medium text-slate-200">
+                {formatBytes(parseInt(String(item.size_bytes || 0), 10) || 0)}
+              </p>
+            </div>
 
             <div>
               <span className="text-slate-400 block mb-1">Created</span>

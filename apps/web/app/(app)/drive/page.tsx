@@ -92,8 +92,8 @@ function DriveContent() {
       return dateB - dateA;
     }
     if (sortBy === 'size') {
-      const sizeA = !a.isFolder ? parseInt(a.size_bytes, 10) : 0;
-      const sizeB = !b.isFolder ? parseInt(b.size_bytes, 10) : 0;
+      const sizeA = parseInt(String(a.size_bytes || 0), 10) || 0;
+      const sizeB = parseInt(String(b.size_bytes || 0), 10) || 0;
       return sizeB - sizeA;
     }
     return 0;

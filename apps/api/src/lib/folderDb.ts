@@ -6,6 +6,7 @@ export interface FolderRow {
   owner_id: string;
   parent_id: string | null;
   is_deleted: boolean;
+  size_bytes?: string | number;
   created_at: Date;
   updated_at: Date;
 }
@@ -22,16 +23,35 @@ export interface FileRow {
   updated_at: Date;
 }
 
+const FOLDER_SIZE_SUBQUERY = `
+  COALESCE((
+    WITH RECURSIVE subfolders AS (
+      SELECT id FROM folders WHERE id = f.id AND is_deleted = false
+      UNION ALL
+      SELECT sf.id FROM folders sf INNER JOIN subfolders s ON sf.parent_id = s.id WHERE sf.is_deleted = false
+    )
+    SELECT SUM(files.size_bytes)
+    FROM files
+    WHERE files.folder_id IN (SELECT id FROM subfolders)
+      AND files.is_deleted = false
+      AND files.status = 'ready'
+  ), 0) AS size_bytes
+`;
+
 export async function findFolderById(id: string, ownerId?: string): Promise<FolderRow | null> {
   if (ownerId) {
     const result = await db.query<FolderRow>(
-      'SELECT id, name, owner_id, parent_id, is_deleted, created_at, updated_at FROM folders WHERE id = $1 AND owner_id = $2 AND is_deleted = false',
+      `SELECT f.id, f.name, f.owner_id, f.parent_id, f.is_deleted, f.created_at, f.updated_at,
+              ${FOLDER_SIZE_SUBQUERY}
+       FROM folders f WHERE f.id = $1 AND f.owner_id = $2 AND f.is_deleted = false`,
       [id, ownerId],
     );
     return result.rows[0] ?? null;
   }
   const result = await db.query<FolderRow>(
-    'SELECT id, name, owner_id, parent_id, is_deleted, created_at, updated_at FROM folders WHERE id = $1 AND is_deleted = false',
+    `SELECT f.id, f.name, f.owner_id, f.parent_id, f.is_deleted, f.created_at, f.updated_at,
+            ${FOLDER_SIZE_SUBQUERY}
+     FROM folders f WHERE f.id = $1 AND f.is_deleted = false`,
     [id],
   );
   return result.rows[0] ?? null;
@@ -60,10 +80,22 @@ export async function getFolderChildren(
   let folderParams: (string | null)[];
 
   if (parentId === null) {
-    foldersQuery = 'SELECT id, name, owner_id, parent_id, created_at, updated_at FROM folders WHERE owner_id = $1 AND parent_id IS NULL AND is_deleted = false ORDER BY name ASC';
+    foldersQuery = `
+      SELECT f.id, f.name, f.owner_id, f.parent_id, f.created_at, f.updated_at,
+             ${FOLDER_SIZE_SUBQUERY}
+      FROM folders f
+      WHERE f.owner_id = $1 AND f.parent_id IS NULL AND f.is_deleted = false
+      ORDER BY f.name ASC
+    `;
     folderParams = [ownerId!];
   } else {
-    foldersQuery = 'SELECT id, name, owner_id, parent_id, created_at, updated_at FROM folders WHERE parent_id = $1 AND is_deleted = false ORDER BY name ASC';
+    foldersQuery = `
+      SELECT f.id, f.name, f.owner_id, f.parent_id, f.created_at, f.updated_at,
+             ${FOLDER_SIZE_SUBQUERY}
+      FROM folders f
+      WHERE f.parent_id = $1 AND f.is_deleted = false
+      ORDER BY f.name ASC
+    `;
     folderParams = [parentId];
   }
   const foldersRes = await db.query<FolderRow>(foldersQuery, folderParams);

@@ -8,6 +8,7 @@ export interface FolderItem {
   owner_id?: string;
   parent_id: string | null;
   role?: 'owner' | 'editor' | 'viewer';
+  size_bytes?: string | number;
   is_starred?: boolean;
   created_at: string;
   updated_at: string;

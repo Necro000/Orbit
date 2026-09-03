@@ -145,7 +145,7 @@ export function FileList({
 
               {/* Size Column */}
               <div className="text-xs text-text-secondary whitespace-nowrap">
-                {item.isFolder ? '—' : formatBytes(item.size_bytes)}
+                {formatBytes(item.size_bytes || 0)}
               </div>
 
               {/* Date Modified Column */}
