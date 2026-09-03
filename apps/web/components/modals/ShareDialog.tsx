@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -52,7 +52,19 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
 
   const shares: ShareEntry[] = sharesData?.shares ?? [];
   const owner = sharesData?.owner ?? null;
-  const isOwnerOrAcl = sharesData?.userAccess?.canManageAcl ?? true;
+  const isOwnerOrAcl = Boolean(sharesData?.userAccess?.canManageAcl);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === 'Escape') {
+        handleClose();
+      }
+    }
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen]);
 
   const publicUrl = linkShare
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/link/${linkShare.token}`
@@ -177,26 +189,31 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
   const isCurrentOwner = currentUser?.id === owner?.id;
 
   return (
-    <div className="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="share-dialog-title">
-      <div className="modal-backdrop" onClick={handleClose} />
-      <div className="modal-card max-w-xl w-full bg-slate-900 border border-slate-700/80 rounded-2xl p-6 shadow-2xl text-slate-100 relative z-10 animate-scale-in">
+    <div className="modal-backdrop" onClick={handleClose}>
+      <div
+        className="modal-card max-w-xl w-full max-h-[calc(100vh-2rem)] overflow-y-auto bg-bg-surface border border-border-subtle rounded-2xl p-6 shadow-2xl text-text-primary relative z-10 animate-scale-in my-auto"
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-dialog-title"
+      >
         {/* Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+        <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-accent/10 border border-accent/20 text-accent flex items-center justify-center">
               <Icon name={resource.type === 'folder' ? 'folder' : 'file'} className="w-5 h-5" />
             </div>
             <div>
-              <h2 id="share-dialog-title" className="text-base font-semibold text-slate-100 flex items-center gap-2 line-clamp-1">
+              <h2 id="share-dialog-title" className="text-base font-semibold text-text-primary flex items-center gap-2 line-clamp-1">
                 Share &ldquo;{resource.name}&rdquo;
               </h2>
-              <p className="text-xs text-slate-400">Collaborate with individuals or configure public access</p>
+              <p className="text-xs text-text-secondary">Collaborate with individuals or configure public access</p>
             </div>
           </div>
           <button
             type="button"
             onClick={handleClose}
-            className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition"
+            className="text-text-secondary hover:text-text-primary p-2 rounded-lg hover:bg-bg-surface-hover transition cursor-pointer"
             aria-label="Close dialog"
           >
             <Icon name="close" className="w-4 h-4" />
@@ -206,8 +223,8 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
         {/* Section 1: Add People and Groups */}
         {isOwnerOrAcl && (
           <form onSubmit={handleInvite} className="mt-5 space-y-2">
-            <div className="flex items-center gap-2 bg-slate-800/90 border border-slate-700 focus-within:border-indigo-500 focus-within:ring-1 focus-within:ring-indigo-500/50 rounded-xl p-1.5 transition">
-              <div className="pl-2 text-slate-400">
+            <div className="flex items-center gap-2 bg-bg-surface-hover/80 border border-border-subtle focus-within:border-accent focus-within:ring-1 focus-within:ring-accent/50 rounded-xl p-1.5 transition">
+              <div className="pl-2 text-text-secondary">
                 <Icon name="user" className="w-4 h-4" />
               </div>
               <input
@@ -215,74 +232,75 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
                 placeholder="Add people by email..."
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="flex-1 bg-transparent px-2 py-1 text-sm text-white placeholder-slate-400 focus:outline-none"
+                className="flex-1 bg-transparent px-2 py-1 text-sm text-text-primary placeholder-text-secondary focus:outline-none"
                 required
+                autoFocus
               />
               <select
                 value={role}
                 onChange={(e) => setRole(e.target.value as 'viewer' | 'editor')}
-                className="bg-slate-700/80 hover:bg-slate-700 border border-slate-600 rounded-lg px-2.5 py-1 text-xs text-slate-200 focus:outline-none cursor-pointer"
+                className="bg-bg-surface hover:bg-bg-surface-hover border border-border-subtle rounded-lg px-2.5 py-1 text-xs text-text-primary focus:outline-none cursor-pointer"
               >
-                <option value="viewer">Viewer</option>
-                <option value="editor">Editor</option>
+                <option value="viewer" className="bg-bg-surface text-text-primary">Viewer</option>
+                <option value="editor" className="bg-bg-surface text-text-primary">Editor</option>
               </select>
               <button
                 type="submit"
                 disabled={isInviting || !email.trim()}
-                className="bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition shrink-0"
+                className="bg-accent hover:bg-accent-hover disabled:opacity-40 text-white text-xs font-semibold px-3.5 py-1.5 rounded-lg transition shrink-0 cursor-pointer"
               >
                 {isInviting ? 'Inviting...' : 'Invite'}
               </button>
             </div>
-            {inviteError && <p className="text-xs text-red-400 px-1">{inviteError}</p>}
+            {inviteError && <p className="text-xs text-rose-400 px-1">{inviteError}</p>}
           </form>
         )}
 
         {/* Section 2: People with access */}
         <div className="mt-6">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-2.5">
             People with access
           </h3>
           <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
             {/* Owner Row */}
             {owner && (
-              <div className="flex items-center justify-between p-2 rounded-xl bg-slate-800/40 border border-slate-800 text-sm">
+              <div className="flex items-center justify-between p-2.5 rounded-xl bg-bg-surface-hover/40 border border-border-subtle text-sm">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-indigo-900/80 text-indigo-300 font-semibold flex items-center justify-center text-xs border border-indigo-700/50">
+                  <div className="w-8 h-8 rounded-full bg-accent/20 text-accent font-semibold flex items-center justify-center text-xs border border-accent/30">
                     {(owner.name || owner.email || 'O').charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <div className="flex items-center gap-1.5">
-                      <p className="font-medium text-xs text-white">{owner.name || 'Owner'}</p>
-                      {isCurrentOwner && <span className="text-[10px] text-indigo-300 font-medium">(you)</span>}
+                      <p className="font-medium text-xs text-text-primary">{owner.name || 'Owner'}</p>
+                      {isCurrentOwner && <span className="text-[10px] text-accent font-medium">(you)</span>}
                     </div>
-                    <p className="text-[11px] text-slate-400">{owner.email}</p>
+                    <p className="text-[11px] text-text-secondary">{owner.email}</p>
                   </div>
                 </div>
-                <span className="text-xs font-medium text-slate-400 px-2.5 py-1">Owner</span>
+                <span className="text-xs font-medium text-text-secondary px-2.5 py-1">Owner</span>
               </div>
             )}
 
             {/* Collaborators */}
             {isLoadingShares ? (
-              <p className="text-xs text-slate-500 py-3 text-center">Loading collaborators...</p>
+              <p className="text-xs text-text-secondary py-3 text-center">Loading collaborators...</p>
             ) : shares.length === 0 && !owner ? (
-              <p className="text-xs text-slate-500 py-3 text-center">No collaborators added yet.</p>
+              <p className="text-xs text-text-secondary py-3 text-center">No collaborators added yet.</p>
             ) : (
               shares.map((share: ShareEntry) => (
                 <div
                   key={share.id}
-                  className="flex items-center justify-between p-2 rounded-xl bg-slate-800/40 border border-slate-800 text-sm hover:bg-slate-800/70 transition"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-bg-surface-hover/40 border border-border-subtle text-sm hover:bg-bg-surface-hover/70 transition"
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-emerald-900/60 text-emerald-300 font-semibold flex items-center justify-center text-xs border border-emerald-700/40">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 font-semibold flex items-center justify-center text-xs border border-emerald-500/30">
                       {(share.grantee_name || share.grantee_email || 'U').charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-medium text-xs text-white">
+                      <p className="font-medium text-xs text-text-primary">
                         {share.grantee_name || share.grantee_email}
                       </p>
-                      <p className="text-[11px] text-slate-400">{share.grantee_email}</p>
+                      <p className="text-[11px] text-text-secondary">{share.grantee_email}</p>
                     </div>
                   </div>
 
@@ -292,14 +310,14 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
                       onChange={(e) =>
                         handleRoleChange(share, e.target.value as 'viewer' | 'editor' | 'remove')
                       }
-                      className="bg-slate-700/70 hover:bg-slate-700 border border-slate-600 rounded-lg px-2 py-1 text-xs text-slate-200 focus:outline-none cursor-pointer"
+                      className="bg-bg-surface hover:bg-bg-surface-hover border border-border-subtle rounded-lg px-2 py-1 text-xs text-text-primary focus:outline-none cursor-pointer"
                     >
-                      <option value="viewer">Viewer</option>
-                      <option value="editor">Editor</option>
-                      <option value="remove">Remove access</option>
+                      <option value="viewer" className="bg-bg-surface text-text-primary">Viewer</option>
+                      <option value="editor" className="bg-bg-surface text-text-primary">Editor</option>
+                      <option value="remove" className="bg-bg-surface text-rose-400">Remove access</option>
                     </select>
                   ) : (
-                    <span className="text-xs text-slate-400 px-2 py-1 capitalize">{share.role}</span>
+                    <span className="text-xs text-text-secondary px-2 py-1 capitalize">{share.role}</span>
                   )}
                 </div>
               ))
@@ -308,19 +326,19 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
         </div>
 
         {/* Section 3: General Access (Google Drive Style) */}
-        <div className="mt-6 pt-4 border-t border-slate-800">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2.5">
+        <div className="mt-6 pt-4 border-t border-border-subtle">
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-secondary mb-2.5">
             General access
           </h3>
 
-          <div className="p-3 bg-slate-800/50 border border-slate-800 rounded-xl space-y-3">
+          <div className="p-3.5 bg-bg-surface-hover/40 border border-border-subtle rounded-xl space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div className="flex items-start gap-3">
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center text-xs mt-0.5 ${
                     linkShare
                       ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                      : 'bg-slate-700/40 text-slate-400 border border-slate-700'
+                      : 'bg-bg-surface text-text-secondary border border-border-subtle'
                   }`}
                 >
                   <Icon name={linkShare ? 'globe' : 'lock'} className="w-4 h-4" />
@@ -334,22 +352,22 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
                         onChange={(e) =>
                           handleGeneralAccessChange(e.target.value as 'restricted' | 'public')
                         }
-                        className="bg-transparent font-medium text-xs text-slate-100 hover:text-indigo-300 cursor-pointer focus:outline-none"
+                        className="bg-transparent font-medium text-xs text-text-primary hover:text-accent cursor-pointer focus:outline-none"
                       >
-                        <option value="restricted" className="bg-slate-800 text-white">
+                        <option value="restricted" className="bg-bg-surface text-text-primary">
                           Restricted
                         </option>
-                        <option value="public" className="bg-slate-800 text-white">
+                        <option value="public" className="bg-bg-surface text-text-primary">
                           Anyone with the link
                         </option>
                       </select>
                     ) : (
-                      <span className="font-medium text-xs text-slate-100">
+                      <span className="font-medium text-xs text-text-primary">
                         {linkShare ? 'Anyone with the link' : 'Restricted'}
                       </span>
                     )}
                   </div>
-                  <p className="text-[11px] text-slate-400 mt-0.5">
+                  <p className="text-[11px] text-text-secondary mt-0.5">
                     {linkShare
                       ? 'Anyone on the Internet with the link can view and download'
                       : 'Only people with access can open with the link'}
@@ -359,14 +377,14 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
 
               {linkShare && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs bg-slate-700/60 border border-slate-600 px-2 py-0.5 rounded text-slate-300">
+                  <span className="text-xs bg-bg-surface border border-border-subtle px-2 py-0.5 rounded text-text-secondary">
                     Viewer
                   </span>
                   {isOwnerOrAcl && (
                     <button
                       type="button"
                       onClick={() => setShowAdvancedLink(!showAdvancedLink)}
-                      className="text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline"
+                      className="text-[11px] text-accent hover:underline cursor-pointer"
                     >
                       {showAdvancedLink ? 'Hide options' : 'Options'}
                     </button>
@@ -377,26 +395,26 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
 
             {/* Advanced Options for Link Share */}
             {linkShare && showAdvancedLink && isOwnerOrAcl && (
-              <div className="pt-2 border-t border-slate-700/60 space-y-2.5 text-xs">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-slate-300">
+              <div className="pt-2 border-t border-border-subtle space-y-2.5 text-xs">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-text-secondary">
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-400">Security:</span>
+                    <span>Security:</span>
                     {linkShare.hasPassword ? (
-                      <span className="bg-amber-950/80 text-amber-300 border border-amber-800/80 px-2 py-0.5 rounded">
+                      <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2 py-0.5 rounded">
                         🔒 Password protected
                       </span>
                     ) : (
-                      <span className="text-slate-400">No password</span>
+                      <span>No password</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-400">Expires:</span>
+                    <span>Expires:</span>
                     {linkShare.expiresAt ? (
-                      <span className="bg-slate-700 text-slate-300 px-2 py-0.5 rounded">
+                      <span className="bg-bg-surface text-text-primary px-2 py-0.5 rounded border border-border-subtle">
                         ⏳ {new Date(linkShare.expiresAt).toLocaleDateString()}
                       </span>
                     ) : (
-                      <span className="text-slate-400">Never</span>
+                      <span>Never</span>
                     )}
                   </div>
                 </div>
@@ -406,14 +424,14 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
         </div>
 
         {/* Footer */}
-        <div className="mt-6 flex items-center justify-between pt-4 border-t border-slate-800">
+        <div className="mt-6 flex items-center justify-between pt-4 border-t border-border-subtle">
           <button
             type="button"
             onClick={handleCopyLink}
-            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl border transition ${
+            className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-xl border transition cursor-pointer ${
               isCopied
-                ? 'bg-emerald-600/20 text-emerald-300 border-emerald-500/40'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                : 'bg-bg-surface-hover hover:bg-bg-surface text-text-primary border-border-subtle'
             }`}
           >
             <Icon name={isCopied ? 'check' : 'link'} className="w-4 h-4" />
@@ -423,7 +441,7 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
           <button
             type="button"
             onClick={handleClose}
-            className="px-5 py-2 text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition shadow-lg shadow-indigo-600/20"
+            className="px-5 py-2 text-xs font-semibold bg-accent hover:bg-accent-hover text-white rounded-xl transition shadow-lg shadow-accent/20 cursor-pointer"
           >
             Done
           </button>
