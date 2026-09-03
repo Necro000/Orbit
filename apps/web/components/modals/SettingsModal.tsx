@@ -152,7 +152,8 @@ export function SettingsModal({ isOpen, onClose, currentUser }: SettingsModalPro
 
   // Storage calculations
   const maxStorage = storage?.maxStorageBytes || 15 * 1024 * 1024 * 1024;
-  const totalUsed = storage?.totalUsed || 0;
+  const knownUsedBytes = currentUser.storageUsedBytes ?? 0;
+  const totalUsed = storage ? storage.totalUsed : knownUsedBytes;
   const usedPercent = Math.min(100, (totalUsed / maxStorage) * 100);
 
   const videoPct = storage ? (storage.videos / maxStorage) * 100 : 0;
@@ -160,6 +161,7 @@ export function SettingsModal({ isOpen, onClose, currentUser }: SettingsModalPro
   const imagePct = storage ? (storage.images / maxStorage) * 100 : 0;
   const docPct = storage ? (storage.documents / maxStorage) * 100 : 0;
   const trashPct = storage ? (storage.trash / maxStorage) * 100 : 0;
+  const fallbackPct = !storage ? usedPercent : 0;
 
   return (
     <div
@@ -405,13 +407,26 @@ export function SettingsModal({ isOpen, onClose, currentUser }: SettingsModalPro
 
                 {/* Multi-segment Progress Bar */}
                 <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden flex gap-0.5">
-                  <div style={{ width: `${videoPct}%` }} className="bg-indigo-500 h-full" title="Videos" />
-                  <div style={{ width: `${audioPct}%` }} className="bg-pink-500 h-full" title="Audio" />
-                  <div style={{ width: `${imagePct}%` }} className="bg-emerald-500 h-full" title="Images" />
-                  <div style={{ width: `${docPct}%` }} className="bg-sky-500 h-full" title="Documents" />
-                  <div style={{ width: `${trashPct}%` }} className="bg-rose-500 h-full" title="Trash" />
+                  {storage ? (
+                    <>
+                      <div style={{ width: `${videoPct}%` }} className="bg-indigo-500 h-full transition-all duration-300" title="Videos" />
+                      <div style={{ width: `${audioPct}%` }} className="bg-pink-500 h-full transition-all duration-300" title="Audio" />
+                      <div style={{ width: `${imagePct}%` }} className="bg-emerald-500 h-full transition-all duration-300" title="Images" />
+                      <div style={{ width: `${docPct}%` }} className="bg-sky-500 h-full transition-all duration-300" title="Documents" />
+                      <div style={{ width: `${trashPct}%` }} className="bg-rose-500 h-full transition-all duration-300" title="Trash" />
+                    </>
+                  ) : (
+                    <div style={{ width: `${Math.max(1, fallbackPct)}%` }} className="bg-indigo-500 h-full transition-all duration-300" title="Used storage" />
+                  )}
                 </div>
               </div>
+
+              {!storage && totalUsed > 0 && (
+                <div className="text-[11px] text-amber-300/80 bg-amber-950/20 border border-amber-800/30 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                  <span className="animate-spin">⏳</span>
+                  <span>Syncing detailed media breakdown with server... Total usage reflects your active drive.</span>
+                </div>
+              )}
 
               {/* Categorical Breakdown Cards */}
               <div className="grid grid-cols-2 gap-3 text-xs">
@@ -444,7 +459,9 @@ export function SettingsModal({ isOpen, onClose, currentUser }: SettingsModalPro
                     <span className="w-2.5 h-2.5 rounded-full bg-sky-500 flex-shrink-0" />
                     <span className="text-slate-300">📦 Documents</span>
                   </div>
-                  <span className="font-semibold text-white">{formatBytes(storage?.documents || 0)}</span>
+                  <span className="font-semibold text-white">
+                    {formatBytes(storage?.documents || (!storage && totalUsed > 0 ? totalUsed : 0))}
+                  </span>
                 </div>
               </div>
 
