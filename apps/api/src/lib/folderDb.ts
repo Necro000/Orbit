@@ -25,17 +25,12 @@ export interface FileRow {
 
 const FOLDER_SIZE_SUBQUERY = `
   COALESCE((
-    WITH RECURSIVE subfolders AS (
-      SELECT id FROM folders WHERE id = f.id AND is_deleted = false
-      UNION ALL
-      SELECT sf.id FROM folders sf INNER JOIN subfolders s ON sf.parent_id = s.id WHERE sf.is_deleted = false
-    )
     SELECT SUM(files.size_bytes)
     FROM files
-    WHERE files.folder_id IN (SELECT id FROM subfolders)
+    WHERE (files.folder_id = f.id OR files.folder_id IN (SELECT id FROM folders WHERE parent_id = f.id AND is_deleted = false))
       AND files.is_deleted = false
       AND files.status = 'ready'
-  ), 0) AS size_bytes
+  ), 0)::text AS size_bytes
 `;
 
 export async function findFolderById(id: string, ownerId?: string): Promise<FolderRow | null> {
