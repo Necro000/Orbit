@@ -14,8 +14,8 @@ import {
 } from '../lib/tokens';
 import type { AuthenticatedRequest } from '../middleware/authenticate';
 import { authenticate } from '../middleware/authenticate';
-import { LoginSchema, RegisterSchema } from '../schemas/auth';
 import { authRateLimiter } from '../middleware/rateLimiter';
+import { LoginSchema, RegisterSchema } from '../schemas/auth';
 
 const router: IRouter = Router();
 const BCRYPT_ROUNDS = 12;

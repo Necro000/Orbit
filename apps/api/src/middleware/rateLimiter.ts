@@ -7,16 +7,26 @@ interface WindowEntry {
   resetAt: number;
 }
 
+function extractRateLimitKey(req: AuthenticatedRequest): string {
+  const ip = req.ip || req.socket.remoteAddress || 'unknown';
+  const body = req.body as unknown;
+  let identifier = req.user?.id ?? 'anon';
+
+  if (typeof body === 'object' && body !== null && 'email' in body) {
+    const rawEmail = (body as Record<string, unknown>)['email'];
+    if (typeof rawEmail === 'string' && rawEmail.trim().length > 0) {
+      identifier = rawEmail.trim().toLowerCase();
+    }
+  }
+
+  return `${identifier}:${ip}`;
+}
+
 function createSlidingLimiter(maxRequests: number, windowMs: number, customMessage: string) {
   const hits = new Map<string, WindowEntry>();
 
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
-    const emailKey =
-      typeof req.body === 'object' && req.body && 'email' in req.body && typeof req.body.email === 'string'
-        ? req.body.email.trim().toLowerCase()
-        : (req.user?.id ?? 'anon');
-    const key = `${emailKey}:${ip}`;
+    const key = extractRateLimitKey(req);
     const now = Date.now();
 
     const record = hits.get(key);
@@ -60,4 +70,3 @@ export const authRateLimiter = createSlidingLimiter(
   15 * 60 * 1000,
   'Too many login attempts. Please wait 15 minutes before trying again.',
 );
-
