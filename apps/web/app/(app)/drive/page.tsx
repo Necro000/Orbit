@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 
 import { AppShell } from '@/components/layout/AppShell';
 import { FileGrid } from '@/components/drive/FileGrid';
@@ -37,6 +38,7 @@ function DriveContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const folderId = searchParams.get('folder') || 'root';
+  const queryClient = useQueryClient();
   const { toast } = useToast();
 
   const [view, setView] = useState<'grid' | 'list'>('grid');
@@ -154,6 +156,8 @@ function DriveContent() {
           prev.map((u) => (u.id === uploadId ? { ...u, progressPercent: 100, status: 'done' } : u)),
         );
         toast({ type: 'success', message: `Uploaded ${file.name}` });
+        await queryClient.invalidateQueries({ queryKey: ['folder'] });
+        void folderQuery.refetch();
       } catch (err: unknown) {
         setUploads((prev) =>
           prev.map((u) =>
