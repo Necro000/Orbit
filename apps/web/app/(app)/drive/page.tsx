@@ -193,6 +193,30 @@ function DriveContent() {
     }
   }
 
+  async function handleDropBreadcrumb(targetFolderId: string, e: React.DragEvent) {
+    const internalId = e.dataTransfer.getData('orbit/item-id');
+    const isFolder = e.dataTransfer.getData('orbit/is-folder') === 'true';
+    const destinationId = targetFolderId === 'root' ? null : targetFolderId;
+    if (internalId) {
+      try {
+        if (isFolder) {
+          await moveFolder(internalId, destinationId);
+          toast({ type: 'success', message: 'Folder moved successfully' });
+        } else {
+          await moveFile(internalId, destinationId);
+          toast({ type: 'success', message: 'File moved successfully' });
+        }
+        await queryClient.invalidateQueries({ queryKey: ['folder'] });
+        void folderQuery.refetch();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Failed to move item';
+        toast({ type: 'error', message: msg });
+      }
+    } else if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      await handleFilesSelected(Array.from(e.dataTransfer.files), destinationId);
+    }
+  }
+
   const handleToggleStarAction = async (item: DriveItem) => {
     try {
       await toggleStar.mutateAsync({
@@ -210,30 +234,31 @@ function DriveContent() {
   };
 
   const handleDeleteWithUndo = async (item: DriveItem) => {
-    const resourceType = item.isFolder ? 'folder' : 'file';
-    const resourceId = item.id;
-    const name = item.name;
-
-    if (item.isFolder) {
-      await deleteFolder.mutateAsync(item.id);
-    } else {
-      await deleteFile.mutateAsync(item.id);
+    try {
+      if (item.isFolder) {
+        await deleteFolder.mutateAsync(item.id);
+      } else {
+        await deleteFile.mutateAsync(item.id);
+      }
+      toast({
+        type: 'info',
+        message: `Moved "${item.name}" to trash`,
+        actionLabel: 'Undo',
+        onAction: async () => {
+          try {
+            await restoreTrash.mutateAsync({
+              resourceType: item.isFolder ? 'folder' : 'file',
+              resourceId: item.id,
+            });
+            toast({ type: 'success', message: `Restored "${item.name}"` });
+          } catch {
+            toast({ type: 'error', message: `Failed to restore "${item.name}"` });
+          }
+        },
+      });
+    } catch {
+      toast({ type: 'error', message: `Failed to delete "${item.name}"` });
     }
-    setSelectedIds((prev) => prev.filter((id) => id !== item.id));
-
-    toast({
-      type: 'info',
-      message: `Moved "${name}" to trash`,
-      actionLabel: 'Undo',
-      onAction: async () => {
-        try {
-          await restoreTrash.mutateAsync({ resourceType, resourceId });
-          toast({ type: 'success', message: `Restored "${name}"` });
-        } catch {
-          toast({ type: 'error', message: `Could not restore "${name}"` });
-        }
-      },
-    });
   };
 
   const handleCopyLinkDirect = async (item: DriveItem) => {
@@ -249,6 +274,7 @@ function DriveContent() {
     <AppShell
       breadcrumbPath={isSearching ? [{ id: 'search', name: 'Search Results' }] : (folderQuery.data?.path || [])}
       onNavigateBreadcrumb={handleNavigateBreadcrumb}
+      onDropBreadcrumb={handleDropBreadcrumb}
       toolbarProps={{
         onNewFolder: () => setIsCreateModalOpen(true),
         onUpload: () => fileInputRef.current?.click(),

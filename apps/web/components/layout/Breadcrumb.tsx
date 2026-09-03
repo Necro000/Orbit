@@ -1,4 +1,4 @@
-'use client';
+import React, { useState } from 'react';
 
 export interface BreadcrumbSegment {
   id: string;
@@ -8,11 +8,14 @@ export interface BreadcrumbSegment {
 export interface BreadcrumbProps {
   path?: BreadcrumbSegment[];
   onNavigate?: (folderId: string) => void;
+  onDropTarget?: (targetFolderId: string, e: React.DragEvent) => void;
 }
 
 const MAX_VISIBLE = 3; // collapse middle segments if path exceeds this
 
-export function Breadcrumb({ path = [], onNavigate }: BreadcrumbProps) {
+export function Breadcrumb({ path = [], onNavigate, onDropTarget }: BreadcrumbProps) {
+  const [dragOverId, setDragOverId] = useState<string | null>(null);
+
   // Truncate deep paths: show first + last (MAX_VISIBLE - 1) segments with "…" in between
   const shouldTruncate = path.length > MAX_VISIBLE;
   const visibleSegments = shouldTruncate
@@ -35,8 +38,28 @@ export function Breadcrumb({ path = [], onNavigate }: BreadcrumbProps) {
         <li className="flex items-center gap-1.5">
           <button
             type="button"
-            className="text-[22px] font-semibold text-accent hover:underline transition-colors"
+            className={`text-[22px] font-semibold transition-all px-1.5 py-0.5 rounded-lg ${
+              dragOverId === 'root'
+                ? 'text-amber-300 bg-amber-400/20 ring-2 ring-amber-400 scale-105'
+                : 'text-accent hover:underline'
+            }`}
             onClick={() => onNavigate?.('root')}
+            onDragOver={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOverId('root');
+            }}
+            onDragLeave={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              if (dragOverId === 'root') setDragOverId(null);
+            }}
+            onDrop={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setDragOverId(null);
+              onDropTarget?.('root', e);
+            }}
           >
             My Drive
           </button>
@@ -59,8 +82,28 @@ export function Breadcrumb({ path = [], onNavigate }: BreadcrumbProps) {
                 <>
                   <button
                     type="button"
-                    className="text-[22px] font-semibold text-accent hover:underline transition-colors"
+                    className={`text-[22px] font-semibold transition-all px-1.5 py-0.5 rounded-lg ${
+                      dragOverId === seg.id
+                        ? 'text-amber-300 bg-amber-400/20 ring-2 ring-amber-400 scale-105'
+                        : 'text-accent hover:underline'
+                    }`}
                     onClick={() => onNavigate?.(seg.id)}
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragOverId(seg.id);
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      if (dragOverId === seg.id) setDragOverId(null);
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setDragOverId(null);
+                      onDropTarget?.(seg.id, e);
+                    }}
                   >
                     {seg.name}
                   </button>

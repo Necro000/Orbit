@@ -12,6 +12,7 @@ export interface AppShellProps {
   children: React.ReactNode;
   breadcrumbPath?: BreadcrumbSegment[];
   onNavigateBreadcrumb?: (folderId: string) => void;
+  onDropBreadcrumb?: (targetFolderId: string, e: React.DragEvent) => void;
   toolbarProps?: Partial<ToolbarProps>;
 }
 
@@ -24,6 +25,7 @@ export function AppShell({
   children,
   breadcrumbPath,
   onNavigateBreadcrumb,
+  onDropBreadcrumb,
   toolbarProps,
 }: AppShellProps) {
   const { data: currentUser } = useCurrentUser();
@@ -42,7 +44,11 @@ export function AppShell({
 
           <div className="flex-1 flex flex-col overflow-y-auto px-6 pb-6">
             <div className="w-full max-w-[1400px] mx-auto flex-1 flex flex-col">
-              <Breadcrumb path={breadcrumbPath} onNavigate={onNavigateBreadcrumb} />
+              <Breadcrumb
+                path={breadcrumbPath}
+                onNavigate={onNavigateBreadcrumb}
+                onDropTarget={onDropBreadcrumb}
+              />
               <main className="flex-1 pt-4" id="main-content">
                 {children}
               </main>
