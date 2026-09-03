@@ -1,9 +1,9 @@
 import { db } from '../db';
 
 /**
- * 10 GB Free Tier storage quota (in bytes)
+ * 15 GB Free Tier storage quota (in bytes)
  */
-export const MAX_STORAGE_BYTES = 10 * 1024 * 1024 * 1024; // 10,737,418,240 bytes
+export const MAX_STORAGE_BYTES = 15 * 1024 * 1024 * 1024; // 16,106,127,360 bytes
 
 export interface StorageQuotaResult {
   allowed: boolean;

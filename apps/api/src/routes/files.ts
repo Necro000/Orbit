@@ -56,13 +56,13 @@ router.post('/init', uploadInitRateLimiter, (req: AuthenticatedRequest, res: Res
     const { name, mimeType, sizeBytes, folderId, fileId, checksum } = parseRes.data;
     const userId = req.user!.id;
 
-    // Storage Quota Enforcement (10 GB free tier limit)
+    // Storage Quota Enforcement (15 GB free tier limit)
     const quota = await checkStorageQuota(userId, sizeBytes);
     if (!quota.allowed) {
       res.status(403).json({
         error: {
           code: 'QUOTA_EXCEEDED',
-          message: 'Storage quota exceeded (10 GB). Please delete files or empty your Trash to free up space.',
+          message: 'Storage quota exceeded (15 GB). Please delete files or empty your Trash to free up space.',
         },
       });
       return;
