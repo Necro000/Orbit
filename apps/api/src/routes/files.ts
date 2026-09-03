@@ -396,7 +396,10 @@ router.get('/:id/preview', (req: AuthenticatedRequest, res: Response): void => {
 
       if (previewVerification.exists) {
         imageBuffer = await storage.getObject(previewKey);
-      } else if (file.mime_type.startsWith('image/')) {
+      } else if (
+        file.mime_type.startsWith('image/') ||
+        /\.(jpe?g|jfif|png|webp|avif|gif|bmp|tiff)$/i.test(file.name)
+      ) {
         const rawBuffer = await storage.getObject(file.storage_key);
         imageBuffer = await sharp(rawBuffer)
           .resize(200, 200, { fit: 'cover', withoutEnlargement: false })

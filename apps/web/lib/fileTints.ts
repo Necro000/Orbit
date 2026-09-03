@@ -52,7 +52,7 @@ export function getFileCategory(
   // Image extensions / mime
   if (
     mimeType?.startsWith('image/') ||
-    (ext && ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'ico'].includes(ext))
+    (ext && ['png', 'jpg', 'jpeg', 'jfif', 'webp', 'avif', 'heic', 'heif', 'svg', 'gif', 'bmp', 'ico', 'tiff'].includes(ext))
   ) {
     return 'image';
   }

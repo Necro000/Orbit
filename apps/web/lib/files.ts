@@ -81,17 +81,60 @@ export async function downloadFile(fileId: string) {
   document.body.removeChild(a);
 }
 
+export function validateFileSizeLimit(file: File): { valid: boolean; error?: string } {
+  const ext = file.name.split('.').pop()?.toLowerCase() || '';
+  const mime = (file.type || '').toLowerCase();
+
+  // Video max 2 GB
+  if (mime.startsWith('video/') || ['mp4', 'webm', 'mov', 'mkv', 'avi', 'wmv'].includes(ext)) {
+    if (file.size > 2 * 1024 * 1024 * 1024) {
+      return { valid: false, error: 'Video files cannot exceed 2 GB.' };
+    }
+  }
+  // Audio max 250 MB
+  else if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'flac', 'm4a', 'aac'].includes(ext)) {
+    if (file.size > 250 * 1024 * 1024) {
+      return { valid: false, error: 'Audio files cannot exceed 250 MB.' };
+    }
+  }
+  // Image max 100 MB
+  else if (
+    mime.startsWith('image/') ||
+    ['png', 'jpg', 'jpeg', 'jfif', 'webp', 'avif', 'heic', 'heif', 'svg', 'gif', 'bmp', 'ico', 'tiff'].includes(ext)
+  ) {
+    if (file.size > 100 * 1024 * 1024) {
+      return { valid: false, error: 'Image files cannot exceed 100 MB.' };
+    }
+  }
+  // All other files max 1 GB
+  else if (file.size > 1024 * 1024 * 1024) {
+    return { valid: false, error: 'Files cannot exceed 1 GB.' };
+  }
+
+  return { valid: true };
+}
+
 export async function uploadFileDirect(
   file: File,
   folderId?: string | null,
   onProgress?: (pct: number) => void,
 ): Promise<FileItem> {
+  const check = validateFileSizeLimit(file);
+  if (!check.valid) {
+    throw new Error(check.error);
+  }
+
+  let mimeType = file.type || 'application/octet-stream';
+  if ((mimeType === 'application/octet-stream' || !mimeType) && file.name.toLowerCase().endsWith('.jfif')) {
+    mimeType = 'image/jpeg';
+  }
+
   // 1. Init upload
   const initRes = await apiFetch<InitUploadResponse>('/api/files/init', {
     method: 'POST',
     body: JSON.stringify({
       name: file.name,
-      mimeType: file.type || 'application/octet-stream',
+      mimeType,
       sizeBytes: file.size,
       folderId: folderId ?? null,
     }),
