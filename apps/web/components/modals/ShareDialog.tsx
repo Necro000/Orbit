@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 
 import {
@@ -54,6 +54,16 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
   const owner = sharesData?.owner ?? null;
   const isOwnerOrAcl = Boolean(sharesData?.userAccess?.canManageAcl);
 
+  const handleClose = useCallback(() => {
+    setEmail('');
+    setRole('viewer');
+    setInviteError(null);
+    setIsCopied(false);
+    setShowAdvancedLink(false);
+    setPassword('');
+    onClose();
+  }, [onClose]);
+
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -64,23 +74,13 @@ export function ShareDialog({ isOpen, onClose, resource }: ShareDialogProps) {
       window.addEventListener('keydown', handleKeyDown);
       return () => window.removeEventListener('keydown', handleKeyDown);
     }
-  }, [isOpen]);
+  }, [isOpen, handleClose]);
 
   const publicUrl = linkShare
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/link/${linkShare.token}`
     : typeof window !== 'undefined' && resource
       ? `${window.location.origin}/drive?${resource.type}=${resource.id}`
       : '';
-
-  const handleClose = () => {
-    setEmail('');
-    setRole('viewer');
-    setInviteError(null);
-    setIsCopied(false);
-    setShowAdvancedLink(false);
-    setPassword('');
-    onClose();
-  };
 
   if (!isOpen || !resource) return null;
 
