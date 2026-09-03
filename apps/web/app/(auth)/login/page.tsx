@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/components/ui/Toast';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -23,12 +25,14 @@ export default function LoginPage() {
     const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
       setError('Please enter your email address.');
+      toast({ type: 'error', message: 'Please enter your email address.' });
       triggerShake();
       return;
     }
 
     if (!password) {
       setError('Please enter your password.');
+      toast({ type: 'error', message: 'Please enter your password.' });
       triggerShake();
       return;
     }
@@ -40,6 +44,7 @@ export default function LoginPage() {
         method: 'POST',
         body: JSON.stringify({ email: cleanEmail, password }),
       });
+      toast({ type: 'success', message: 'Welcome back! Loading your drive...' });
       router.push('/drive');
     } catch (err) {
       triggerShake();
@@ -47,13 +52,19 @@ export default function LoginPage() {
         if (err.code === 'INVALID_CREDENTIALS' || err.status === 401) {
           setIsInvalidCredentials(true);
           setError('Invalid email or password. Please check your credentials or create an account.');
+          toast({ type: 'error', message: 'Invalid credentials! Wrong email or password entered.' });
         } else if (err.code === 'RATE_LIMIT_EXCEEDED' || err.status === 429) {
-          setError(err.message || 'Too many login attempts. Please wait 15 minutes before trying again.');
+          const msg = err.message || 'Too many login attempts. Please wait 15 minutes before trying again.';
+          setError(msg);
+          toast({ type: 'error', message: 'Too many attempts! Account locked for 15 minutes.' });
         } else {
           setError(err.message);
+          toast({ type: 'error', message: err.message });
         }
       } else {
-        setError('Something went wrong. Please check your network connection.');
+        const msg = 'Something went wrong. Please check your network connection.';
+        setError(msg);
+        toast({ type: 'error', message: msg });
       }
     } finally {
       setLoading(false);

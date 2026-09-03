@@ -910,6 +910,21 @@
     animation: shake 0.35s ease-in-out;
   }
 
+  @keyframes toastSlideInTopRight {
+    0% {
+      opacity: 0;
+      transform: translateY(-16px) scale(0.95);
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+
+  .animate-toast-in {
+    animation: toastSlideInTopRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
   .modal-container {
     background: var(--bg-surface);
     border: 1px solid var(--border-subtle);

@@ -4,9 +4,11 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useMemo } from 'react';
 import { apiFetch, ApiError } from '@/lib/api';
+import { useToast } from '@/components/ui/Toast';
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,25 +55,33 @@ export default function RegisterPage() {
     const cleanEmail = email.trim().toLowerCase();
 
     if (cleanName.length < 2) {
-      setError('Name must be at least 2 characters.');
+      const msg = 'Name must be at least 2 characters.';
+      setError(msg);
+      toast({ type: 'error', message: msg });
       triggerShake();
       return;
     }
 
     if (/^\d+$/.test(cleanName)) {
-      setError('Name cannot be numbers only. Please use letters or your real name.');
+      const msg = 'Name cannot be numbers only. Please use letters or your real name.';
+      setError(msg);
+      toast({ type: 'error', message: msg });
       triggerShake();
       return;
     }
 
     if (!cleanEmail) {
-      setError('Please enter a valid email address.');
+      const msg = 'Please enter a valid email address.';
+      setError(msg);
+      toast({ type: 'error', message: msg });
       triggerShake();
       return;
     }
 
     if (passwordStrength.score < 5) {
-      setError('Please choose a strong password (at least 8 chars, uppercase, lowercase, number, and special character).');
+      const msg = 'Please choose a strong password (at least 8 chars, uppercase, lowercase, number, and special character).';
+      setError(msg);
+      toast({ type: 'error', message: msg });
       triggerShake();
       return;
     }
@@ -83,13 +93,17 @@ export default function RegisterPage() {
         method: 'POST',
         body: JSON.stringify({ email: cleanEmail, name: cleanName, password }),
       });
+      toast({ type: 'success', message: 'Account created successfully! Welcome to Orbit.' });
       router.push('/drive');
     } catch (err) {
       triggerShake();
       if (err instanceof ApiError) {
         setError(err.message);
+        toast({ type: 'error', message: err.message });
       } else {
-        setError('Something went wrong. Please try again.');
+        const msg = 'Something went wrong. Please try again.';
+        setError(msg);
+        toast({ type: 'error', message: msg });
       }
     } finally {
       setLoading(false);
