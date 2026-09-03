@@ -17,6 +17,7 @@ import {
   enqueuePreviewGeneration,
   enqueueVersionPruning,
 } from '../lib/previewWorker';
+import { checkStorageQuota } from '../lib/quota';
 import { storage, buildStorageKey } from '../lib/storage';
 import {
   listFileVersions,
@@ -54,6 +55,18 @@ router.post('/init', uploadInitRateLimiter, (req: AuthenticatedRequest, res: Res
     }
     const { name, mimeType, sizeBytes, folderId, fileId, checksum } = parseRes.data;
     const userId = req.user!.id;
+
+    // Storage Quota Enforcement (10 GB free tier limit)
+    const quota = await checkStorageQuota(userId, sizeBytes);
+    if (!quota.allowed) {
+      res.status(403).json({
+        error: {
+          code: 'QUOTA_EXCEEDED',
+          message: 'Storage quota exceeded (10 GB). Please delete files or empty your Trash to free up space.',
+        },
+      });
+      return;
+    }
 
     // Case A: Uploading a new version of an existing file
     if (fileId) {
@@ -439,6 +452,10 @@ router.patch('/:id', (req: AuthenticatedRequest, res: Response): void => {
       const targetAccess = await resolveAccess(userId, 'folder', folderId);
       if (!targetAccess.canRead) {
         res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Destination folder not found.' } });
+        return;
+      }
+      if (!targetAccess.canWrite) {
+        res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You do not have write permission in the destination folder.' } });
         return;
       }
     }

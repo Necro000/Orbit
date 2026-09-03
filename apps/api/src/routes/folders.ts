@@ -151,6 +151,10 @@ router.patch('/:id', (req: AuthenticatedRequest, res: Response): void => {
         res.status(404).json({ error: { code: 'FOLDER_NOT_FOUND', message: 'Destination folder not found.' } });
         return;
       }
+      if (!targetAccess.canWrite) {
+        res.status(403).json({ error: { code: 'FORBIDDEN', message: 'You do not have write permission in the destination folder.' } });
+        return;
+      }
       const isCyclic = await isDescendantFolder(folderId, parentId);
       if (isCyclic) {
         res.status(400).json({ error: { code: 'CYCLIC_MOVE_NOT_ALLOWED', message: 'A folder cannot be moved into one of its subfolders.' } });
