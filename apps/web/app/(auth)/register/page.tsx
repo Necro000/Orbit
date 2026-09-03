@@ -119,29 +119,6 @@ export default function RegisterPage() {
       </div>
 
       <form id="register-form" className="auth-form" onSubmit={handleSubmit} noValidate>
-        {error && (
-          <div
-            className="auth-error"
-            role="alert"
-            aria-live="polite"
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '8px',
-              padding: '12px 14px',
-              background: 'rgba(239, 68, 68, 0.12)',
-              border: '1px solid rgba(239, 68, 68, 0.35)',
-              borderRadius: '8px',
-              color: '#f87171',
-              fontSize: '13px',
-              lineHeight: '1.4',
-            }}
-          >
-            <span style={{ fontSize: '15px', lineHeight: 1 }} aria-hidden="true">⚠️</span>
-            <span style={{ flex: 1 }}>{error}</span>
-          </div>
-        )}
-
         <div className="form-field">
           <label htmlFor="register-name" className="form-label">Full name</label>
           <input
