@@ -274,6 +274,12 @@ function DriveContent() {
                   onSelect={handleSelect}
                   onOpen={handleOpen}
                   onContextMenu={(item, pos) => setContextMenu({ item, pos })}
+                  onToggleStar={handleToggleStarAction}
+                  onDownload={(file) => {
+                    downloadFile(file.id).catch(() => {
+                      toast({ type: 'error', message: 'Failed to download file' });
+                    });
+                  }}
                 />
               ) : (
                 <FileList
