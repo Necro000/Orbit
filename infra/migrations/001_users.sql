@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS users (
   image_url     TEXT,
   password_hash TEXT,
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT users_email_unique UNIQUE (email)
 );
 

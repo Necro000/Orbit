@@ -74,12 +74,34 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     let code = 'UNKNOWN_ERROR';
-    let message = res.statusText;
+    let message = res.statusText || '';
     try {
-      const body = await res.json() as { error?: { code?: string; message?: string } };
-      code = body.error?.code ?? code;
-      message = body.error?.message ?? message;
-    } catch { /* non-JSON error body */ }
+      const body = (await res.json()) as {
+        error?: string | { code?: string; message?: string };
+        message?: string;
+        code?: string;
+      };
+      if (typeof body.error === 'string') {
+        message = body.error;
+      } else if (body.error && typeof body.error === 'object') {
+        code = body.error.code ?? code;
+        message = body.error.message ?? message;
+      } else if (body.message) {
+        message = body.message;
+      }
+      if (body.code) {
+        code = body.code;
+      }
+    } catch {
+      /* non-JSON error body */
+    }
+
+    if (!message || message.trim() === '') {
+      message = res.status === 401 
+        ? 'Authentication failed or session expired.'
+        : `Request failed with status ${res.status}`;
+    }
+
     throw new ApiError(res.status, code, message);
   }
 

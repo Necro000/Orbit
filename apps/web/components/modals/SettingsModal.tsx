@@ -30,6 +30,7 @@ export function SettingsModal({ isOpen, onClose, currentUser }: SettingsModalPro
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [isChangingPass, setIsChangingPass] = useState(false);
 
   // Storage Breakdown Query
@@ -123,7 +124,9 @@ export function SettingsModal({ isOpen, onClose, currentUser }: SettingsModalPro
       setConfirmPassword('');
       toast({ type: 'success', message: 'Password changed successfully! Other sessions logged out.' });
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Failed to change password.';
+      const msg = (err instanceof ApiError && err.message?.trim())
+        ? err.message
+        : 'Failed to change password. Please check your current password and try again.';
       toast({ type: 'error', message: msg });
     } finally {
       setIsChangingPass(false);
@@ -372,14 +375,23 @@ export function SettingsModal({ isOpen, onClose, currentUser }: SettingsModalPro
                 <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-2">
                   Confirm New Password
                 </label>
-                <input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-900/80 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm"
-                  placeholder="••••••••"
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showConfirmPass ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-slate-900/80 border border-slate-700/80 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 text-sm pr-10"
+                    placeholder="••••••••"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPass(!showConfirmPass)}
+                    className="absolute right-3 top-2.5 text-xs text-slate-400 hover:text-white"
+                  >
+                    {showConfirmPass ? 'Hide' : 'Show'}
+                  </button>
+                </div>
               </div>
 
               <div className="flex justify-end pt-2">
