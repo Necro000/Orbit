@@ -44,21 +44,21 @@ Collect all errors. Categorize into:
 
 ---
 
-### Step 2 — Check API → DB Data Contract
+### Step 2 — Check API → DB Data Contract & Mutation Parity
 
 For each API route in `apps/api/src/routes/*.ts`:
 
-1. Open the route file and list every SQL `SELECT` statement.
-2. Cross-reference with the TypeScript interface it's cast to (e.g., `FileRow`, `FolderRow`, `ShareRow`).
-3. Verify ALL interface fields appear in the `SELECT` list.
+1. **SELECT Queries**: Open the route file and list every SQL `SELECT` statement. Cross-reference with the TypeScript interface it's cast to (e.g., `FileRow`, `FolderRow`, `ShareRow`). Verify ALL interface fields appear in the `SELECT` list.
+2. **UPDATE / INSERT Mutations**: List every column updated or inserted (e.g. `updated_at`, `password_hash`, `storage_used_bytes`). Cross-reference each column with `infra/migrations/*.sql` table definitions to ensure the column exists in the database schema.
 
-**Common missing fields to check:**
-| Interface Field | Often missing in |
-| :--- | :--- |
-| `folder_id` | `stars.ts`, `shared.ts` GET queries |
-| `owner_id` | `stars.ts`, `recent.ts` GET queries |
-| `is_deleted` | trash queries |
-| `storage_key` | files queries for download |
+**Common missing fields & columns to check:**
+| Field / Column | Often missing in | Impact |
+| :--- | :--- | :--- |
+| `updated_at` | `users` table (`001_users.sql`) vs `auth.ts` | 500 crash on password & profile update |
+| `folder_id` | `stars.ts`, `shared.ts` GET queries | Broken folder navigation |
+| `owner_id` | `stars.ts`, `recent.ts` GET queries | Broken ownership badges |
+| `is_deleted` | trash queries | Incorrect file listings |
+| `storage_key` | files queries for download | 500 on file download |
 
 ---
 
@@ -147,6 +147,20 @@ Verify all 5 migration files are referenced in `pnpm db:migrate` runner:
 
 ---
 
+### Step 7b — Check Error Contracts & Toast Resilience
+
+Verify error handling across frontend clients and API calls:
+
+1. **HTTP/2 Empty `statusText` Guard**: In modern browsers under HTTP/2, `res.statusText` is `""`. Ensure `apiFetch` in `apps/web/lib/api.ts` always provides a non-empty fallback message and extracts error payloads from `{ error: { message } }`, flat `{ error }`, and `{ message }`.
+2. **Substance Over Identity in Catch Blocks**: Never use `const msg = err instanceof ApiError ? err.message : fallback`. If `err.message` is `""`, the fallback is bypassed. Always use:
+   ```typescript
+   const msg = (err instanceof ApiError && err.message?.trim()) ? err.message : fallback;
+   ```
+3. **Stale Session Token Invalidation**: When an authenticated endpoint returns 404 with code `USER_NOT_FOUND`, the client must detect this as an expired session and guide the user to log out and re-authenticate.
+4. **Form Input Symmetry**: All sensitive input fields (e.g. Current, New, and Confirm Password) must have visibility toggles to prevent undetected typographical mismatches.
+
+---
+
 ### Step 8 — Final Verification
 
 After ALL fixes, run this verification sequence:
@@ -184,3 +198,6 @@ Issues found and fixed during Phase 1 diagnosis:
 | ORB-008 | `apps/web/next.config.ts` | Missing `output: 'standalone'` for Docker production build | Added `output: 'standalone'` |
 | ORB-009 | `infra/migrations` | `005_file_versions.sql` omitted from README and no automated runner | Created `migrate.ts` runner + `pnpm db:migrate` command |
 | ORB-010 | `apps/api/src/index.ts` | No database health probe endpoint | Added `GET /health` with `SELECT 1` check |
+| ORB-011 | `infra/migrations/001_users.sql` | `users` table omitted `updated_at` column, causing 500 error in `auth.ts:360` on password update | Added `updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()` to `001_users.sql` and database |
+| ORB-012 | `apps/web/lib/api.ts` | HTTP/2 empty `statusText` and proxy errors produced `""` message in `ApiError`, rendering blank error toast | Hardened `apiFetch` with fallback messages and `USER_NOT_FOUND` session detection |
+| ORB-013 | `apps/web/components/modals/SettingsModal.tsx` | Confirm password field lacked Show/Hide toggle, and catch block ternary bypassed fallback string | Added `showConfirmPass` toggle and substance-checking `.trim()` fallback guard |
