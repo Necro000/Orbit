@@ -96,9 +96,13 @@ export async function apiFetch<T>(
       /* non-JSON error body */
     }
 
-    if (!message || message.trim() === '') {
+    if (code === 'USER_NOT_FOUND') {
+      message = 'Account session expired or user not found. Please log out and sign in again.';
+    } else if (!message || message.trim() === '') {
       message = res.status === 401 
         ? 'Authentication failed or session expired.'
+        : res.status === 404
+        ? 'Requested resource or session not found.'
         : `Request failed with status ${res.status}`;
     }
 
